@@ -1703,44 +1703,44 @@ window.replyToTicket = async function(ticketId) {
 // REPORT CARD GENERATOR & UTILITIES
 // ==========================================
 
-// 1. Load students into the dropdown selector
-async function loadStudentsForReport() {
-  const select = document.getElementById('reportStudentSelect');
+// 1. Load students into the dynamic class card dropdown selector
+async function loadStudentsForReport(classCode) {
+  const select = document.getElementById(classCode ? `reportStudentSelect_${classCode}` : 'reportStudentSelect');
   if (!select) return;
 
   select.innerHTML = '<option value="">Loading students...</option>';
 
-  // Fetch registered students from Supabase
+  // Fetch student profile details from Supabase
   const { data: students, error } = await supabaseClient
     .from('profiles')
-    .select('id, full_name, position')
-    .ilike('position', '%Student%');
+    .select('id, full_name, name, email, role, position');
 
   if (error || !students || students.length === 0) {
-    // Fallback search if position filter varies
-    const { data: allUsers } = await supabaseClient
-      .from('profiles')
-      .select('id, full_name');
-
-    if (!allUsers || allUsers.length === 0) {
-      select.innerHTML = '<option value="">No students found</option>';
-      return;
-    }
-
-    select.innerHTML = '<option value="">-- Choose Student --</option>' + 
-      allUsers.map(s => `<option value="${s.id}" data-name="${s.full_name}">${s.full_name || 'Unnamed Student'}</option>`).join('');
+    select.innerHTML = '<option value="">No students found</option>';
     return;
   }
 
+  // Filter students based on role or position if present
+  const studentList = students.filter(s => {
+    const roleStr = (s.role || s.position || '').toLowerCase();
+    return roleStr.includes('student') || roleStr === '' || !s.role;
+  });
+
+  const listToRender = studentList.length > 0 ? studentList : students;
+
   select.innerHTML = '<option value="">-- Choose Student --</option>' + 
-    students.map(s => `<option value="${s.id}" data-name="${s.full_name}">${s.full_name}</option>`).join('');
+    listToRender.map(s => {
+      // Name Priority: full_name -> name -> email handle -> Fallback ID
+      const displayName = s.full_name || s.name || (s.email ? s.email.split('@')[0] : null) || `Student (${s.id.substring(0, 5)})`;
+      return `<option value="${s.id}" data-name="${displayName}">${displayName}</option>`;
+    }).join('');
 }
 
 // 2. Main handler when clicking "Download Report Card (PDF)"
-async function handleGenerateReport() {
-  const studentSelect = document.getElementById('reportStudentSelect');
-  const termSelect = document.getElementById('reportTerm');
-  const yearSelect = document.getElementById('reportYear');
+async function handleGenerateReport(classCode, className = "Primary School") {
+  const studentSelect = document.getElementById(classCode ? `reportStudentSelect_${classCode}` : 'reportStudentSelect');
+  const termSelect = document.getElementById(classCode ? `reportTerm_${classCode}` : 'reportTerm');
+  const yearSelect = document.getElementById(classCode ? `reportYear_${classCode}` : 'reportYear');
 
   if (!studentSelect || !studentSelect.value) {
     alert("Please select a student first.");
@@ -1772,10 +1772,10 @@ async function handleGenerateReport() {
     return;
   }
 
-  // Generate and download PDF
-  await generateReportCard(studentName, "Primary School", marks, {
-    name: "SMARTEDU ACADEMY",
-    location: "NYAGATARE",
+  // Generate and download PDF report card
+  await generateReportCard(studentName, className, marks, {
+    name: currentUser?.school || "SMARTEDU ACADEMY",
+    location: currentUser?.school_location || "NYAGATARE",
     term: selectedTerm,
     year: selectedYear
   });
@@ -1818,7 +1818,7 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
   const averagePercentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(1) : 0;
   const overallGrade = calculateGrade(averagePercentage);
 
-  // Build hidden off-screen element for canvas capture
+  // Build off-screen HTML element for canvas capture
   const container = document.createElement('div');
   container.style.position = 'absolute';
   container.style.left = '-9999px';
@@ -1830,7 +1830,7 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
 
   container.innerHTML = `
     <div style="text-align: center; border-bottom: 3px solid #16a34a; padding-bottom: 12px; margin-bottom: 20px;">
-      <h1 style="margin: 0; font-size: 22px; color: #0f172a; text-transform: uppercase;">${schoolDetails.name || 'SMARTEDU PORTAL'}</h1>
+      <h1 style="margin: 0; font-size: 22px; color: #0f172a; text-transform: uppercase;">${schoolDetails.name || 'SMARTEDU ACADEMY'}</h1>
       <p style="margin: 4px 0 0 0; font-size: 13px; color: #475569;">Location: ${schoolDetails.location || 'NYAGATARE, RWANDA'}</p>
       <h2 style="margin: 12px 0 0 0; font-size: 16px; color: #16a34a; text-transform: uppercase;">STUDENT PROGRESS REPORT CARD</h2>
     </div>
@@ -1879,7 +1879,7 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
 
   document.body.appendChild(container);
 
-  // Render HTML to PDF canvas
+  // Render HTML element to PDF using html2canvas & jsPDF
   const canvas = await html2canvas(container, { scale: 2, useCORS: true });
   const imgData = canvas.toDataURL('image/png');
   const pdf = new jsPDF('p', 'mm', 'a4');
@@ -1893,65 +1893,9 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
   document.body.removeChild(container);
 }
 
-// Auto-populate student list on DOM ready
+// Auto-populate static student dropdown on initial page load if present
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     loadStudentsForReport();
   }, 1000);
 });
-// Load students into the class dropdown
-async function loadStudentsForReport(classCode) {
-    const select = document.getElementById(`reportStudentSelect_${classCode}`);
-    if (!select) return;
-
-    select.innerHTML = '<option value="">Loading students...</option>';
-
-    const { data: students, error } = await supabaseClient
-        .from('profiles')
-        .select('id, full_name');
-
-    if (error || !students || students.length === 0) {
-        select.innerHTML = '<option value="">No students found</option>';
-        return;
-    }
-
-    select.innerHTML = '<option value="">-- Choose Student --</option>' + 
-        students.map(s => `<option value="${s.id}" data-name="${s.full_name}">${s.full_name || 'Student'}</option>`).join('');
-}
-
-// Handle PDF generation click
-async function handleGenerateReport(classCode, className) {
-    const studentSelect = document.getElementById(`reportStudentSelect_${classCode}`);
-    const termSelect = document.getElementById(`reportTerm_${classCode}`);
-    const yearSelect = document.getElementById(`reportYear_${classCode}`);
-
-    if (!studentSelect || !studentSelect.value) {
-        alert("Please select a student first.");
-        return;
-    }
-
-    const studentId = studentSelect.value;
-    const selectedOption = studentSelect.options[studentSelect.selectedIndex];
-    const studentName = selectedOption.getAttribute('data-name') || selectedOption.text;
-    const selectedTerm = termSelect ? termSelect.value : 'Term 3';
-    const selectedYear = yearSelect ? yearSelect.value : '2026';
-
-    const { data: marks, error } = await supabaseClient
-        .from('student_marks')
-        .select('subject_name, marks_obtained, max_marks')
-        .eq('student_id', studentId)
-        .eq('term', selectedTerm)
-        .eq('academic_year', selectedYear);
-
-    if (error || !marks || marks.length === 0) {
-        alert(`No marks recorded for ${studentName} in ${selectedTerm} (${selectedYear}).`);
-        return;
-    }
-
-    await generateReportCard(studentName, className, marks, {
-        name: currentUser?.school || "SMARTEDU ACADEMY",
-        location: currentUser?.school_location || "NYAGATARE",
-        term: selectedTerm,
-        year: selectedYear
-    });
-}
