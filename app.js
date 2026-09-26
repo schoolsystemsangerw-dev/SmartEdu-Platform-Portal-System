@@ -1703,41 +1703,71 @@ window.replyToTicket = async function(ticketId) {
 // REPORT CARD GENERATOR & UTILITIES
 // ==========================================
 
-// 1. Load students into the dynamic class card dropdown selector
+// 1. Load enrolled students for a specific class into the report dropdown
 async function loadStudentsForReport(classCode) {
   const select = document.getElementById(classCode ? `reportStudentSelect_${classCode}` : 'reportStudentSelect');
   if (!select) return;
 
-  select.innerHTML = '<option value="">Loading students...</option>';
+  select.innerHTML = '<option value="">Loading enrolled students...</option>';
 
-  // Fetch student profile details from Supabase
-  const { data: students, error } = await supabaseClient
-    .from('profiles')
-    .select('id, full_name, name, email, role, position');
+  try {
+    // A. If classCode is provided, fetch student emails enrolled in that specific class
+    let enrolledEmails = [];
+    if (classCode) {
+      const { data: enrollments, error: enrollError } = await supabaseClient
+        .from('enrollments')
+        .select('student_email')
+        .eq('class_code', classCode);
 
-  if (error || !students || students.length === 0) {
-    select.innerHTML = '<option value="">No students found</option>';
-    return;
+      if (!enrollError && enrollments && enrollments.length > 0) {
+        enrolledEmails = enrollments.map(e => e.student_email).filter(Boolean);
+      }
+    }
+
+    // B. Query profiles for these students (or all students if no specific class filter)
+    let query = supabaseClient.from('profiles').select('id, full_name, name, email, role, position');
+
+    if (enrolledEmails.length > 0) {
+      query = query.in('email', enrolledEmails);
+    }
+
+    const { data: students, error } = await query;
+
+    // C. Fallback: Query student_marks directly if profiles aren't fully populated
+    if (error || !students || students.length === 0) {
+      let markQuery = supabaseClient.from('student_marks').select('student_id, student_email').not('student_id', 'is', null);
+      const { data: marksStudents } = await markQuery;
+
+      if (!marksStudents || marksStudents.length === 0) {
+        select.innerHTML = '<option value="">No enrolled students found</option>';
+        return;
+      }
+
+      // Unique student records from student_marks
+      const uniqueStudentIds = [...new Set(marksStudents.map(m => m.student_id))];
+      select.innerHTML = '<option value="">-- Select Student --</option>' +
+        uniqueStudentIds.map(id => {
+          const match = marksStudents.find(m => m.student_id === id);
+          const name = match ? (match.student_email ? match.student_email.split('@')[0] : `Student (${id.substring(0, 5)})`) : `Student (${id.substring(0, 5)})`;
+          return `<option value="${id}" data-name="${name}">${name}</option>`;
+        }).join('');
+      return;
+    }
+
+    select.innerHTML = '<option value="">-- Select Student --</option>' +
+      students.map(s => {
+        const displayName = s.full_name || s.name || (s.email ? s.email.split('@')[0] : null) || `Student (${s.id.substring(0, 5)})`;
+        return `<option value="${s.id}" data-name="${displayName}" data-email="${s.email || ''}">${displayName}</option>`;
+      }).join('');
+
+  } catch (err) {
+    console.error("Error loading students for report:", err);
+    select.innerHTML = '<option value="">Error loading list</option>';
   }
-
-  // Filter students based on role or position if present
-  const studentList = students.filter(s => {
-    const roleStr = (s.role || s.position || '').toLowerCase();
-    return roleStr.includes('student') || roleStr === '' || !s.role;
-  });
-
-  const listToRender = studentList.length > 0 ? studentList : students;
-
-  select.innerHTML = '<option value="">-- Choose Student --</option>' + 
-    listToRender.map(s => {
-      // Name Priority: full_name -> name -> email handle -> Fallback ID
-      const displayName = s.full_name || s.name || (s.email ? s.email.split('@')[0] : null) || `Student (${s.id.substring(0, 5)})`;
-      return `<option value="${s.id}" data-name="${displayName}">${displayName}</option>`;
-    }).join('');
 }
 
-// 2. Main handler when clicking "Download Report Card (PDF)"
-async function handleGenerateReport(classCode, className = "Primary School") {
+// 2. Teacher/Student handler when clicking "Download Report Card (PDF)"
+async function handleGenerateReport(classCode, className = "Primary Class") {
   const studentSelect = document.getElementById(classCode ? `reportStudentSelect_${classCode}` : 'reportStudentSelect');
   const termSelect = document.getElementById(classCode ? `reportTerm_${classCode}` : 'reportTerm');
   const yearSelect = document.getElementById(classCode ? `reportYear_${classCode}` : 'reportYear');
@@ -1750,21 +1780,36 @@ async function handleGenerateReport(classCode, className = "Primary School") {
   const studentId = studentSelect.value;
   const selectedOption = studentSelect.options[studentSelect.selectedIndex];
   const studentName = selectedOption.getAttribute('data-name') || selectedOption.text;
+  const studentEmail = selectedOption.getAttribute('data-email');
   const selectedTerm = termSelect ? termSelect.value : 'Term 3';
   const selectedYear = yearSelect ? yearSelect.value : '2026';
 
-  // Fetch marks for selected student, term, and academic year
-  const { data: marks, error } = await supabaseClient
+  // Fetch marks using both student_id and student_email as fallbacks
+  let marks = [];
+  let error = null;
+
+  // Primary fetch: search by student_id
+  const res1 = await supabaseClient
     .from('student_marks')
     .select('subject_name, marks_obtained, max_marks')
     .eq('student_id', studentId)
     .eq('term', selectedTerm)
     .eq('academic_year', selectedYear);
 
-  if (error) {
-    console.error("Error fetching marks:", error);
-    alert("Failed to load student marks from database.");
-    return;
+  if (!res1.error && res1.data && res1.data.length > 0) {
+    marks = res1.data;
+  } else if (studentEmail) {
+    // Secondary fetch: search by student_email
+    const res2 = await supabaseClient
+      .from('student_marks')
+      .select('subject_name, marks_obtained, max_marks')
+      .eq('student_email', studentEmail)
+      .eq('term', selectedTerm)
+      .eq('academic_year', selectedYear);
+
+    if (!res2.error && res2.data && res2.data.length > 0) {
+      marks = res2.data;
+    }
   }
 
   if (!marks || marks.length === 0) {
@@ -1772,7 +1817,7 @@ async function handleGenerateReport(classCode, className = "Primary School") {
     return;
   }
 
-  // Generate and download PDF report card
+  // Generate PDF report card
   await generateReportCard(studentName, className, marks, {
     name: currentUser?.school || "SMARTEDU ACADEMY",
     location: currentUser?.school_location || "NYAGATARE",
@@ -1781,7 +1826,7 @@ async function handleGenerateReport(classCode, className = "Primary School") {
   });
 }
 
-// 3. Core function to construct PDF layout using jsPDF & html2canvas
+// 3. Core PDF Generator function using jsPDF & html2canvas
 async function generateReportCard(studentName, className, marksArray, schoolDetails = {}) {
   const { jsPDF } = window.jspdf;
 
@@ -1818,7 +1863,7 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
   const averagePercentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(1) : 0;
   const overallGrade = calculateGrade(averagePercentage);
 
-  // Build off-screen HTML element for canvas capture
+  // Hidden PDF container layout
   const container = document.createElement('div');
   container.style.position = 'absolute';
   container.style.left = '-9999px';
@@ -1879,7 +1924,7 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
 
   document.body.appendChild(container);
 
-  // Render HTML element to PDF using html2canvas & jsPDF
+  // Convert HTML to PDF canvas
   const canvas = await html2canvas(container, { scale: 2, useCORS: true });
   const imgData = canvas.toDataURL('image/png');
   const pdf = new jsPDF('p', 'mm', 'a4');
@@ -1892,10 +1937,3 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
 
   document.body.removeChild(container);
 }
-
-// Auto-populate static student dropdown on initial page load if present
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    loadStudentsForReport();
-  }, 1000);
-});
