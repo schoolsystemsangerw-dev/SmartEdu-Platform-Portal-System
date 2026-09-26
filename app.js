@@ -1888,8 +1888,7 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
         <div><strong>Term:</strong> ${schoolDetails.term || 'Term 3'}</div>
       </div>
     </div>
-
-    <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
+<table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
       <thead>
         <tr style="background-color: #16a34a; color: #ffffff;">
           <th style="padding: 10px; text-align: left;">Subject</th>
@@ -1924,6 +1923,19 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
 
   document.body.appendChild(container);
 
+  // Convert HTML to PDF canvas using html2canvas & jsPDF
+  const canvas = await html2canvas(container, { scale: 2, useCORS: true });
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jsPDF('p', 'mm', 'a4');
+
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+  pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+  pdf.save(`${studentName.replace(/\s+/g, '_')}_ReportCard.pdf`);
+
+  document.body.removeChild(container);
+}
   // Convert HTML to PDF canvas
   const canvas = await html2canvas(container, { scale: 2, useCORS: true });
   const imgData = canvas.toDataURL('image/png');
