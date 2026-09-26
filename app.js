@@ -1711,7 +1711,7 @@ async function loadStudentsForReport(classCode) {
   select.innerHTML = '<option value="">Loading enrolled students...</option>';
 
   try {
-    // A. If classCode is provided, fetch student emails enrolled in that specific class
+    // A. Fetch student emails enrolled in that specific class if classCode provided
     let enrolledEmails = [];
     if (classCode) {
       const { data: enrollments, error: enrollError } = await supabaseClient
@@ -1724,7 +1724,7 @@ async function loadStudentsForReport(classCode) {
       }
     }
 
-    // B. Query profiles for these students (or all students if no specific class filter)
+    // B. Query profiles for these students
     let query = supabaseClient.from('profiles').select('id, full_name, name, email, role, position');
 
     if (enrolledEmails.length > 0) {
@@ -1733,7 +1733,7 @@ async function loadStudentsForReport(classCode) {
 
     const { data: students, error } = await query;
 
-    // C. Fallback: Query student_marks directly if profiles aren't fully populated
+    // C. Fallback: Query student_marks directly if profiles aren't populated
     if (error || !students || students.length === 0) {
       let markQuery = supabaseClient.from('student_marks').select('student_id, student_email').not('student_id', 'is', null);
       const { data: marksStudents } = await markQuery;
@@ -1743,7 +1743,6 @@ async function loadStudentsForReport(classCode) {
         return;
       }
 
-      // Unique student records from student_marks
       const uniqueStudentIds = [...new Set(marksStudents.map(m => m.student_id))];
       select.innerHTML = '<option value="">-- Select Student --</option>' +
         uniqueStudentIds.map(id => {
@@ -1784,9 +1783,7 @@ async function handleGenerateReport(classCode, className = "Primary Class") {
   const selectedTerm = termSelect ? termSelect.value : 'Term 3';
   const selectedYear = yearSelect ? yearSelect.value : '2026';
 
-  // Fetch marks using both student_id and student_email as fallbacks
   let marks = [];
-  let error = null;
 
   // Primary fetch: search by student_id
   const res1 = await supabaseClient
@@ -1819,8 +1816,8 @@ async function handleGenerateReport(classCode, className = "Primary Class") {
 
   // Generate PDF report card
   await generateReportCard(studentName, className, marks, {
-    name: currentUser?.school || "SMARTEDU ACADEMY",
-    location: currentUser?.school_location || "NYAGATARE",
+    name: window.currentUser?.school || "SMARTEDU ACADEMY",
+    location: window.currentUser?.school_location || "NYAGATARE",
     term: selectedTerm,
     year: selectedYear
   });
@@ -1828,7 +1825,13 @@ async function handleGenerateReport(classCode, className = "Primary Class") {
 
 // 3. Core PDF Generator function using jsPDF & html2canvas
 async function generateReportCard(studentName, className, marksArray, schoolDetails = {}) {
-  const { jsPDF } = window.jspdf;
+  // Resolve jsPDF instance safely regardless of bundle format
+  const jsPDFLib = window.jspdf ? (window.jspdf.jsPDF || window.jspdf) : window.jsPDF;
+
+  if (!jsPDFLib) {
+    alert("PDF generation engine is not loaded yet. Please refresh the page and try again.");
+    return;
+  }
 
   function calculateGrade(score) {
     if (score >= 80) return { grade: 'A', remark: 'Excellent' };
@@ -1888,7 +1891,8 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
         <div><strong>Term:</strong> ${schoolDetails.term || 'Term 3'}</div>
       </div>
     </div>
-<table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
+
+    <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
       <thead>
         <tr style="background-color: #16a34a; color: #ffffff;">
           <th style="padding: 10px; text-align: left;">Subject</th>
@@ -1923,29 +1927,25 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
 
   document.body.appendChild(container);
 
-  // Convert HTML to PDF canvas using html2canvas & jsPDF
-  const canvas = await html2canvas(container, { scale: 2, useCORS: true });
-  const imgData = canvas.toDataURL('image/png');
-  const pdf = new jsPDF('p', 'mm', 'a4');
+  try {
+    const canvas = await html2canvas(container, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDFLib('p', 'mm', 'a4');
 
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-  pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-  pdf.save(`${studentName.replace(/\s+/g, '_')}_ReportCard.pdf`);
-
-  document.body.removeChild(container);
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`${studentName.replace(/\s+/g, '_')}_ReportCard.pdf`);
+  } catch (err) {
+    console.error("PDF generation failed:", err);
+    alert("Failed to create PDF. Please check browser permissions and try again.");
+  } finally {
+    document.body.removeChild(container);
+  }
 }
-  // Convert HTML to PDF canvas
-  const canvas = await html2canvas(container, { scale: 2, useCORS: true });
-  const imgData = canvas.toDataURL('image/png');
-  const pdf = new jsPDF('p', 'mm', 'a4');
 
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-  pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-  pdf.save(`${studentName.replace(/\s+/g, '_')}_ReportCard.pdf`);
-
-  document.body.removeChild(container);
-}
+// Bind functions to window scope to allow inline HTML onclick triggers
+window.loadStudentsForReport = loadStudentsForReport;
+window.handleGenerateReport = handleGenerateReport;
+window.generateReportCard = generateReportCard;
