@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartEdu Portal - Learning & Interactive Exam Platform</title>
 
-    <!-- Speed up DNS resolution for external CDNs -->
+    <!-- Speed up DNS resolution and preconnect to CDNs -->
     <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <!-- Tailwind CSS -->
@@ -32,7 +32,7 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Custom styling & fonts -->
+    <!-- Custom styling & CSS animations -->
     <style>
         body { 
             font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
@@ -42,9 +42,10 @@
         }
         
         .glass-panel {
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(15, 23, 42, 0.75);
             backdrop-filter: blur(16px);
-            border: 1px solid rgba(226, 232, 240, 0.8);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         /* Continuous Smooth Ticker Animation */
