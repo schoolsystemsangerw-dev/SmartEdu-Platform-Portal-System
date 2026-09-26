@@ -1704,7 +1704,7 @@ window.replyToTicket = async function(ticketId) {
 // ==========================================
 
 async function loadStudentsForReport(classCode) {
-  const select = document.getElementById(classCode ? `reportStudentSelect_${classCode}` : 'reportStudentSelect');
+  const select = document.getElementById(classCode ? 'reportStudentSelect_' + classCode : 'reportStudentSelect');
   if (!select) return;
 
   select.innerHTML = '<option value="">Loading enrolled students...</option>';
@@ -1740,20 +1740,22 @@ async function loadStudentsForReport(classCode) {
       }
 
       const uniqueStudentIds = [...new Set(marksStudents.map(m => m.student_id))];
-      select.innerHTML = '<option value="">-- Select Student --</option>' +
-        uniqueStudentIds.map(id => {
-          const match = marksStudents.find(m => m.student_id === id);
-          const name = match ? (match.student_email ? match.student_email.split('@')[0] : `Student (${id.substring(0, 5)})`) : `Student (${id.substring(0, 5)})`;
-          return `<option value="${id}" data-name="${name}">${name}</option>`;
-        }).join('');
+      let optionsHtml = '<option value="">-- Select Student --</option>';
+      uniqueStudentIds.forEach(id => {
+        const match = marksStudents.find(m => m.student_id === id);
+        const name = match ? (match.student_email ? match.student_email.split('@')[0] : 'Student (' + id.substring(0, 5) + ')') : 'Student (' + id.substring(0, 5) + ')';
+        optionsHtml += '<option value="' + id + '" data-name="' + name + '">' + name + '</option>';
+      });
+      select.innerHTML = optionsHtml;
       return;
     }
 
-    select.innerHTML = '<option value="">-- Select Student --</option>' +
-      students.map(s => {
-        const displayName = s.full_name || s.name || (s.email ? s.email.split('@')[0] : null) || `Student (${s.id.substring(0, 5)})`;
-        return `<option value="${s.id}" data-name="${displayName}" data-email="${s.email || ''}">${displayName}</option>`;
-      }).join('');
+    let optionsHtml = '<option value="">-- Select Student --</option>';
+    students.forEach(s => {
+      const displayName = s.full_name || s.name || (s.email ? s.email.split('@')[0] : null) || 'Student (' + s.id.substring(0, 5) + ')';
+      optionsHtml += '<option value="' + s.id + '" data-name="' + displayName + '" data-email="' + (s.email || '') + '">' + displayName + '</option>';
+    });
+    select.innerHTML = optionsHtml;
 
   } catch (err) {
     console.error("Error loading students for report:", err);
@@ -1761,10 +1763,11 @@ async function loadStudentsForReport(classCode) {
   }
 }
 
-async function handleGenerateReport(classCode, className = "Primary Class") {
-  const studentSelect = document.getElementById(classCode ? `reportStudentSelect_${classCode}` : 'reportStudentSelect');
-  const termSelect = document.getElementById(classCode ? `reportTerm_${classCode}` : 'reportTerm');
-  const yearSelect = document.getElementById(classCode ? `reportYear_${classCode}` : 'reportYear');
+async function handleGenerateReport(classCode, className) {
+  if (!className) className = "Primary Class";
+  const studentSelect = document.getElementById(classCode ? 'reportStudentSelect_' + classCode : 'reportStudentSelect');
+  const termSelect = document.getElementById(classCode ? 'reportTerm_' + classCode : 'reportTerm');
+  const yearSelect = document.getElementById(classCode ? 'reportYear_' + classCode : 'reportYear');
 
   if (!studentSelect || !studentSelect.value) {
     alert("Please select a student first.");
@@ -1803,19 +1806,20 @@ async function handleGenerateReport(classCode, className = "Primary Class") {
   }
 
   if (!marks || marks.length === 0) {
-    alert(`No marks recorded for ${studentName} in ${selectedTerm} (${selectedYear}).`);
+    alert("No marks recorded for " + studentName + " in " + selectedTerm + " (" + selectedYear + ").");
     return;
   }
 
   await generateReportCard(studentName, className, marks, {
-    name: window.currentUser?.school || "SMARTEDU ACADEMY",
-    location: window.currentUser?.school_location || "NYAGATARE",
+    name: (window.currentUser && window.currentUser.school) ? window.currentUser.school : "SMARTEDU ACADEMY",
+    location: (window.currentUser && window.currentUser.school_location) ? window.currentUser.school_location : "NYAGATARE",
     term: selectedTerm,
     year: selectedYear
   });
 }
 
-async function generateReportCard(studentName, className, marksArray, schoolDetails = {}) {
+async function generateReportCard(studentName, className, marksArray, schoolDetails) {
+  if (!schoolDetails) schoolDetails = {};
   const jsPDFLib = window.jspdf ? (window.jspdf.jsPDF || window.jspdf) : window.jsPDF;
 
   if (!jsPDFLib) {
@@ -1834,24 +1838,23 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
   let totalObtained = 0;
   let totalMax = 0;
 
-  const rowsHtml = marksArray.map(item => {
+  let rowsHtml = '';
+  marksArray.forEach(item => {
     const score = Number(item.marks_obtained || item.score || 0);
     const maxMarks = Number(item.max_marks || 100);
     totalObtained += score;
     totalMax += maxMarks;
 
-    const { grade, remark } = calculateGrade(score);
+    const res = calculateGrade(score);
 
-    return `
-      <tr style="border-bottom: 1px solid #cbd5e1;">
-        <td style="padding: 10px; font-weight: 500; text-align: left;">${item.subject_name || 'Subject'}</td>
-        <td style="padding: 10px; text-align: center;">${maxMarks}</td>
-        <td style="padding: 10px; text-align: center; font-weight: bold;">${score}</td>
-        <td style="padding: 10px; text-align: center; font-weight: bold; color: #16a34a;">${grade}</td>
-        <td style="padding: 10px; text-align: left; font-style: italic;">${remark}</td>
-      </tr>
-    `;
-  }).join('');
+    rowsHtml += '<tr style="border-bottom: 1px solid #cbd5e1;">' +
+      '<td style="padding: 10px; font-weight: 500; text-align: left;">' + (item.subject_name || 'Subject') + '</td>' +
+      '<td style="padding: 10px; text-align: center;">' + maxMarks + '</td>' +
+      '<td style="padding: 10px; text-align: center; font-weight: bold;">' + score + '</td>' +
+      '<td style="padding: 10px; text-align: center; font-weight: bold; color: #16a34a;">' + res.grade + '</td>' +
+      '<td style="padding: 10px; text-align: left; font-style: italic;">' + res.remark + '</td>' +
+      '</tr>';
+  });
 
   const averagePercentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(1) : 0;
   const overallGrade = calculateGrade(averagePercentage);
@@ -1865,54 +1868,47 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
   container.style.color = '#0f172a';
   container.style.fontFamily = 'Arial, sans-serif';
 
-  container.innerHTML = `
-    <div style="text-align: center; border-bottom: 3px solid #16a34a; padding-bottom: 12px; margin-bottom: 20px;">
-      <h1 style="margin: 0; font-size: 22px; color: #0f172a; text-transform: uppercase;">${schoolDetails.name || 'SMARTEDU ACADEMY'}</h1>
-      <p style="margin: 4px 0 0 0; font-size: 13px; color: #475569;">Location: ${schoolDetails.location || 'NYAGATARE, RWANDA'}</p>
-      <h2 style="margin: 12px 0 0 0; font-size: 16px; color: #16a34a; text-transform: uppercase;">STUDENT PROGRESS REPORT CARD</h2>
-    </div>
-
-    <div style="background-color: #f8fafc; padding: 14px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 20px; font-size: 13px;">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div><strong>Student Name:</strong> ${studentName}</div>
-        <div><strong>Academic Year:</strong> ${schoolDetails.year || '2026'}</div>
-        <div><strong>Class / Level:</strong> ${className}</div>
-        <div><strong>Term:</strong> ${schoolDetails.term || 'Term 3'}</div>
-      </div>
-    </div>
-
-    <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
-      <thead>
-        <tr style="background-color: #16a34a; color: #ffffff;">
-          <th style="padding: 10px; text-align: left;">Subject</th>
-          <th style="padding: 10px; text-align: center;">Max Score</th>
-          <th style="padding: 10px; text-align: center;">Score Obtained</th>
-          <th style="padding: 10px; text-align: center;">Grade</th>
-          <th style="padding: 10px; text-align: left;">Remarks</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rowsHtml}
-      </tbody>
-    </table>
-
-    <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 35px; display: flex; justify-content: space-between;">
-      <div><strong>Total Marks:</strong> ${totalObtained} / ${totalMax}</div>
-      <div><strong>Average:</strong> ${averagePercentage}%</div>
-      <div><strong>Overall Decision:</strong> <span style="color: #16a34a; font-weight: bold;">${overallGrade.grade} (${overallGrade.remark})</span></div>
-    </div>
-
-    <div style="display: flex; justify-content: space-between; margin-top: 50px; font-size: 12px;">
-      <div style="text-align: center;">
-        <p style="margin-bottom: 35px;">___________________________</p>
-        <p><strong>Class Teacher Signature</strong></p>
-      </div>
-      <div style="text-align: center;">
-        <p style="margin-bottom: 35px;">___________________________</p>
-        <p><strong>Headmaster Stamp & Signature</strong></p>
-      </div>
-    </div>
-  `;
+  container.innerHTML = 
+    '<div style="text-align: center; border-bottom: 3px solid #16a34a; padding-bottom: 12px; margin-bottom: 20px;">' +
+      '<h1 style="margin: 0; font-size: 22px; color: #0f172a; text-transform: uppercase;">' + (schoolDetails.name || 'SMARTEDU ACADEMY') + '</h1>' +
+      '<p style="margin: 4px 0 0 0; font-size: 13px; color: #475569;">Location: ' + (schoolDetails.location || 'NYAGATARE, RWANDA') + '</p>' +
+      '<h2 style="margin: 12px 0 0 0; font-size: 16px; color: #16a34a; text-transform: uppercase;">STUDENT PROGRESS REPORT CARD</h2>' +
+    '</div>' +
+    '<div style="background-color: #f8fafc; padding: 14px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 20px; font-size: 13px;">' +
+      '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">' +
+        '<div><strong>Student Name:</strong> ' + studentName + '</div>' +
+        '<div><strong>Academic Year:</strong> ' + (schoolDetails.year || '2026') + '</div>' +
+        '<div><strong>Class / Level:</strong> ' + className + '</div>' +
+        '<div><strong>Term:</strong> ' + (schoolDetails.term || 'Term 3') + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">' +
+      '<thead>' +
+        '<tr style="background-color: #16a34a; color: #ffffff;">' +
+          '<th style="padding: 10px; text-align: left;">Subject</th>' +
+          '<th style="padding: 10px; text-align: center;">Max Score</th>' +
+          '<th style="padding: 10px; text-align: center;">Score Obtained</th>' +
+          '<th style="padding: 10px; text-align: center;">Grade</th>' +
+          '<th style="padding: 10px; text-align: left;">Remarks</th>' +
+        </tr>' +
+      '</thead>' +
+      '<tbody>' + rowsHtml + '</tbody>' +
+    '</table>' +
+    '<div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 35px; display: flex; justify-content: space-between;">' +
+      '<div><strong>Total Marks:</strong> ' + totalObtained + ' / ' + totalMax + '</div>' +
+      '<div><strong>Average:</strong> ' + averagePercentage + '%</div>' +
+      '<div><strong>Overall Decision:</strong> <span style="color: #16a34a; font-weight: bold;">' + overallGrade.grade + ' (' + overallGrade.remark + ')</span></div>' +
+    '</div>' +
+    '<div style="display: flex; justify-content: space-between; margin-top: 50px; font-size: 12px;">' +
+      '<div style="text-align: center;">' +
+        '<p style="margin-bottom: 35px;">___________________________</p>' +
+        '<p><strong>Class Teacher Signature</strong></p>' +
+      '</div>' +
+      '<div style="text-align: center;">' +
+        '<p style="margin-bottom: 35px;">___________________________</p>' +
+        '<p><strong>Headmaster Stamp & Signature</strong></p>' +
+      '</div>' +
+    '</div>';
 
   document.body.appendChild(container);
 
@@ -1925,7 +1921,7 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`${studentName.replace(/\s+/g, '_')}_ReportCard.pdf`);
+    pdf.save(studentName.replace(/\s+/g, '_') + '_ReportCard.pdf');
   } catch (err) {
     console.error("PDF generation failed:", err);
     alert("Failed to create PDF. Please check browser permissions and try again.");
@@ -1934,7 +1930,6 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
   }
 }
 
-// Bind functions to window scope
 window.loadStudentsForReport = loadStudentsForReport;
 window.handleGenerateReport = handleGenerateReport;
 window.generateReportCard = generateReportCard;
