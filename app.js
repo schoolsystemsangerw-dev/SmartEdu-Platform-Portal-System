@@ -170,7 +170,7 @@ function setupAuthTabs() {
 
 // Event Listeners & Form Handlers
 function setupEventListeners() {
-// Registration Handler
+    // Registration Handler
     const registerForm = document.getElementById('register-form');
     if (registerForm) {
         registerForm.addEventListener('submit', async (e) => {
@@ -247,6 +247,7 @@ function setupEventListeners() {
             document.getElementById('tab-login')?.click();
         });
     }
+
     // Login Handler
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
@@ -513,6 +514,7 @@ window.approveUser = async function(email) {
     renderOwnerDashboard();
     alert(`Account approved successfully!`);
 };
+
 // Teacher Dashboard (with Exam Creation, Results Tracking & Report Card Generation)
 async function renderTeacherDashboard() {
     const container = document.getElementById('teacher-classes-cards');
@@ -617,11 +619,11 @@ async function renderTeacherDashboard() {
                                     <option value="">-- Choose Student --</option>
                                 </select>
                             </div>
-                        </div>
 
-                        <button onclick="handleGenerateReport('${c.class_code}', '${c.class_name || c.name || 'Class'}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-md">
-                            <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Report Card (PDF)
-                        </button>
+                            <button onclick="handleGenerateReport('${c.class_code}', '${c.class_name || c.name || 'Class'}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-md">
+                                <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Report Card (PDF)
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -630,7 +632,15 @@ async function renderTeacherDashboard() {
 
     if (window.lucide) lucide.createIcons();
 
-   // Student Dashboard (with Active Exam Session, Score Feedback, Marking Guide & Report Card View)
+    // Populate student dropdowns for each class card
+    classes.forEach(c => {
+        if (typeof loadStudentsForReport === 'function') {
+            loadStudentsForReport(c.class_code);
+        }
+    });
+}
+
+// Student Dashboard (with Active Exam Session, Score Feedback, Marking Guide & Report Card View)
 async function renderStudentDashboard() {
     const container = document.getElementById('student-classes-cards');
     if (!container) return;
@@ -732,7 +742,7 @@ async function renderStudentDashboard() {
                             return `
                                 <button onclick="window.openStudentExam(${ex.id})" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition flex items-center justify-between px-3 shadow-md">
                                     <span class="flex items-center gap-1.5"><i data-lucide="edit-3" class="w-4 h-4"></i> ${ex.title}</span>
-                                    <span class="bg-emerald-950/80 px-2 py-0.5 rounded text-[10px] text-emerald-200 border border-emerald-700/80">⏱️ ${ex.duration_minutes}m \vert{}${ex.total_marks} pts</span>
+                                    <span class="bg-emerald-950/80 px-2 py-0.5 rounded text-[10px] text-emerald-200 border border-emerald-700/80">⏱️ ${ex.duration_minutes}m | ${ex.total_marks} pts</span>
                                 </button>
                             `;
                         }
@@ -802,6 +812,7 @@ async function downloadMyReportCard(classCode, className) {
         year: selectedYear
     });
 }
+
 // Open Exam Creation Modal for Teachers
 window.openCreateExamModal = function(classCode) {
     const modal = document.getElementById('exam-modal');
@@ -1231,6 +1242,7 @@ window.viewExamResults = async function(examId) {
 
     modal.classList.remove('hidden');
 };
+
 // ==========================================
 // HELP DESK, MODAL & USER DIRECTORY MODULE
 // ==========================================
@@ -1699,6 +1711,7 @@ window.replyToTicket = async function(ticketId) {
         alert("Failed to send reply: " + (err.message || "Database error"));
     }
 };
+
 // ==========================================
 // REPORT CARD GENERATOR & UTILITIES
 // ==========================================
@@ -1890,7 +1903,7 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
           '<th style="padding: 10px; text-align: center;">Score Obtained</th>' +
           '<th style="padding: 10px; text-align: center;">Grade</th>' +
           '<th style="padding: 10px; text-align: left;">Remarks</th>' +
-        </tr>' +
+        '</tr>' +
       '</thead>' +
       '<tbody>' + rowsHtml + '</tbody>' +
     '</table>' +
@@ -1930,6 +1943,7 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
   }
 }
 
+// Global scope attachments
 window.loadStudentsForReport = loadStudentsForReport;
 window.handleGenerateReport = handleGenerateReport;
 window.generateReportCard = generateReportCard;
