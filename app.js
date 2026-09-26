@@ -1845,3 +1845,59 @@ document.addEventListener('DOMContentLoaded', () => {
     loadStudentsForReport();
   }, 1000);
 });
+// Load students into the class dropdown
+async function loadStudentsForReport(classCode) {
+    const select = document.getElementById(`reportStudentSelect_${classCode}`);
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Loading students...</option>';
+
+    const { data: students, error } = await supabaseClient
+        .from('profiles')
+        .select('id, full_name');
+
+    if (error || !students || students.length === 0) {
+        select.innerHTML = '<option value="">No students found</option>';
+        return;
+    }
+
+    select.innerHTML = '<option value="">-- Choose Student --</option>' + 
+        students.map(s => `<option value="${s.id}" data-name="${s.full_name}">${s.full_name || 'Student'}</option>`).join('');
+}
+
+// Handle PDF generation click
+async function handleGenerateReport(classCode, className) {
+    const studentSelect = document.getElementById(`reportStudentSelect_${classCode}`);
+    const termSelect = document.getElementById(`reportTerm_${classCode}`);
+    const yearSelect = document.getElementById(`reportYear_${classCode}`);
+
+    if (!studentSelect || !studentSelect.value) {
+        alert("Please select a student first.");
+        return;
+    }
+
+    const studentId = studentSelect.value;
+    const selectedOption = studentSelect.options[studentSelect.selectedIndex];
+    const studentName = selectedOption.getAttribute('data-name') || selectedOption.text;
+    const selectedTerm = termSelect ? termSelect.value : 'Term 3';
+    const selectedYear = yearSelect ? yearSelect.value : '2026';
+
+    const { data: marks, error } = await supabaseClient
+        .from('student_marks')
+        .select('subject_name, marks_obtained, max_marks')
+        .eq('student_id', studentId)
+        .eq('term', selectedTerm)
+        .eq('academic_year', selectedYear);
+
+    if (error || !marks || marks.length === 0) {
+        alert(`No marks recorded for ${studentName} in ${selectedTerm} (${selectedYear}).`);
+        return;
+    }
+
+    await generateReportCard(studentName, className, marks, {
+        name: currentUser?.school || "SMARTEDU ACADEMY",
+        location: currentUser?.school_location || "NYAGATARE",
+        term: selectedTerm,
+        year: selectedYear
+    });
+}
