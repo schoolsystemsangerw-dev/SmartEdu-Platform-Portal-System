@@ -1703,7 +1703,6 @@ window.replyToTicket = async function(ticketId) {
 // REPORT CARD GENERATOR & UTILITIES
 // ==========================================
 
-// 1. Load enrolled students for a specific class into the report dropdown
 async function loadStudentsForReport(classCode) {
   const select = document.getElementById(classCode ? `reportStudentSelect_${classCode}` : 'reportStudentSelect');
   if (!select) return;
@@ -1711,7 +1710,6 @@ async function loadStudentsForReport(classCode) {
   select.innerHTML = '<option value="">Loading enrolled students...</option>';
 
   try {
-    // A. Fetch student emails enrolled in that specific class if classCode provided
     let enrolledEmails = [];
     if (classCode) {
       const { data: enrollments, error: enrollError } = await supabaseClient
@@ -1724,7 +1722,6 @@ async function loadStudentsForReport(classCode) {
       }
     }
 
-    // B. Query profiles for these students
     let query = supabaseClient.from('profiles').select('id, full_name, name, email, role, position');
 
     if (enrolledEmails.length > 0) {
@@ -1733,7 +1730,6 @@ async function loadStudentsForReport(classCode) {
 
     const { data: students, error } = await query;
 
-    // C. Fallback: Query student_marks directly if profiles aren't populated
     if (error || !students || students.length === 0) {
       let markQuery = supabaseClient.from('student_marks').select('student_id, student_email').not('student_id', 'is', null);
       const { data: marksStudents } = await markQuery;
@@ -1765,7 +1761,6 @@ async function loadStudentsForReport(classCode) {
   }
 }
 
-// 2. Teacher/Student handler when clicking "Download Report Card (PDF)"
 async function handleGenerateReport(classCode, className = "Primary Class") {
   const studentSelect = document.getElementById(classCode ? `reportStudentSelect_${classCode}` : 'reportStudentSelect');
   const termSelect = document.getElementById(classCode ? `reportTerm_${classCode}` : 'reportTerm');
@@ -1785,7 +1780,6 @@ async function handleGenerateReport(classCode, className = "Primary Class") {
 
   let marks = [];
 
-  // Primary fetch: search by student_id
   const res1 = await supabaseClient
     .from('student_marks')
     .select('subject_name, marks_obtained, max_marks')
@@ -1796,7 +1790,6 @@ async function handleGenerateReport(classCode, className = "Primary Class") {
   if (!res1.error && res1.data && res1.data.length > 0) {
     marks = res1.data;
   } else if (studentEmail) {
-    // Secondary fetch: search by student_email
     const res2 = await supabaseClient
       .from('student_marks')
       .select('subject_name, marks_obtained, max_marks')
@@ -1814,7 +1807,6 @@ async function handleGenerateReport(classCode, className = "Primary Class") {
     return;
   }
 
-  // Generate PDF report card
   await generateReportCard(studentName, className, marks, {
     name: window.currentUser?.school || "SMARTEDU ACADEMY",
     location: window.currentUser?.school_location || "NYAGATARE",
@@ -1823,9 +1815,7 @@ async function handleGenerateReport(classCode, className = "Primary Class") {
   });
 }
 
-// 3. Core PDF Generator function using jsPDF & html2canvas
 async function generateReportCard(studentName, className, marksArray, schoolDetails = {}) {
-  // Resolve jsPDF instance safely regardless of bundle format
   const jsPDFLib = window.jspdf ? (window.jspdf.jsPDF || window.jspdf) : window.jsPDF;
 
   if (!jsPDFLib) {
@@ -1866,7 +1856,6 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
   const averagePercentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(1) : 0;
   const overallGrade = calculateGrade(averagePercentage);
 
-  // Hidden PDF container layout
   const container = document.createElement('div');
   container.style.position = 'absolute';
   container.style.left = '-9999px';
@@ -1945,7 +1934,7 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
   }
 }
 
-// Bind functions to window scope to allow inline HTML onclick triggers
+// Bind functions to window scope
 window.loadStudentsForReport = loadStudentsForReport;
 window.handleGenerateReport = handleGenerateReport;
 window.generateReportCard = generateReportCard;
