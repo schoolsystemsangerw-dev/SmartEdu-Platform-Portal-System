@@ -513,7 +513,7 @@ window.approveUser = async function(email) {
     renderOwnerDashboard();
     alert(`Account approved successfully!`);
 };
-// Teacher Dashboard (with Exam Creation & Results Tracking)
+// Teacher Dashboard (with Exam Creation, Results Tracking & Report Card Generation)
 async function renderTeacherDashboard() {
     const container = document.getElementById('teacher-classes-cards');
     if (!container) return;
@@ -558,9 +558,9 @@ async function renderTeacherDashboard() {
                     </div>
 
                     <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 space-y-1 text-xs">
-                        <p class="text-slate-300"><span class="text-slate-500">School:</span> ${currentUser.school || 'N/A'} ${currentUser.school_location ? `(${currentUser.school_location})` : ''}</p>
-                        <p class="text-slate-300"><span class="text-slate-500">Teacher:</span> ${currentUser.name} (${currentUser.position || 'Teacher'})</p>
-                        <p class="text-slate-300"><span class="text-slate-500">Phone:</span> <span class="font-mono text-indigo-300">${currentUser.phone || 'N/A'}</span></p>
+                        <p class="text-slate-300"><span class="text-slate-500">School:</span> ${currentUser?.school || 'N/A'} ${currentUser?.school_location ? `(${currentUser.school_location})` : ''}</p>
+                        <p class="text-slate-300"><span class="text-slate-500">Teacher:</span> ${currentUser?.name || 'Teacher'} (${currentUser?.position || 'Teacher'})</p>
+                        <p class="text-slate-300"><span class="text-slate-500">Phone:</span> <span class="font-mono text-indigo-300">${currentUser?.phone || 'N/A'}</span></p>
                     </div>
 
                     <div class="flex justify-between items-center bg-slate-950 p-2.5 rounded-xl border border-slate-800">
@@ -581,18 +581,58 @@ async function renderTeacherDashboard() {
 
                     ${classExams.map(ex => `
                         <button onclick="window.viewExamResults(${ex.id})" class="w-full py-2 bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 font-semibold rounded-xl text-[11px] transition flex items-center justify-between px-3">
-                            <span class="truncate">📊 ${ex.title} Results</span>
+                            <span class="truncate">📊 ${ex.title || ex.exam_title || 'Exam'} Results</span>
                             <span class="text-emerald-400 font-bold">View Marks</span>
                         </button>
                     `).join('')}
+
+                    <!-- REPORT CARD GENERATOR SECTION -->
+                    <div class="mt-3 pt-3 border-t border-slate-800/80 space-y-2.5">
+                        <h5 class="text-xs font-bold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider">
+                            <i data-lucide="file-text" class="w-3.5 h-3.5 text-emerald-400"></i> Generate Student Report Card
+                        </h5>
+
+                        <div class="space-y-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 font-medium mb-1">Academic Year</label>
+                                    <select id="reportYear_${c.class_code}" class="w-full bg-slate-950 border border-slate-800 text-white rounded-lg p-1.5 text-xs focus:ring-1 focus:ring-emerald-500 outline-none">
+                                        <option value="2026" selected>2026</option>
+                                        <option value="2025">2025</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 font-medium mb-1">Term</label>
+                                    <select id="reportTerm_${c.class_code}" class="w-full bg-slate-950 border border-slate-800 text-white rounded-lg p-1.5 text-xs focus:ring-1 focus:ring-emerald-500 outline-none">
+                                        <option value="Term 1">Term 1</option>
+                                        <option value="Term 2">Term 2</option>
+                                        <option value="Term 3" selected>Term 3</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-[10px] text-slate-400 font-medium mb-1">Select Student</label>
+                                <select id="reportStudentSelect_${c.class_code}" class="w-full bg-slate-950 border border-slate-800 text-white rounded-lg p-1.5 text-xs focus:ring-1 focus:ring-emerald-500 outline-none">
+                                    <option value="">-- Choose Student --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button onclick="handleGenerateReport('${c.class_code}', '${c.class_name || c.name || 'Class'}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-md">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Report Card (PDF)
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
     }).join('');
 
     if (window.lucide) lucide.createIcons();
-}
 
+    // Populate student select dropdown for each active class card
+    classes.forEach(c => loadStudentsForReport(c.class_code));
+}
 // Student Dashboard (with Active Exam Session, Score Feedback & Marking Guide View)
 async function renderStudentDashboard() {
     const container = document.getElementById('student-classes-cards');
