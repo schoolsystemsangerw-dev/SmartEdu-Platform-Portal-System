@@ -630,10 +630,7 @@ async function renderTeacherDashboard() {
 
     if (window.lucide) lucide.createIcons();
 
-    // Populate student select dropdown for each active class card
-    classes.forEach(c => loadStudentsForReport(c.class_code));
-}
-// Student Dashboard (with Active Exam Session, Score Feedback & Marking Guide View)
+   // Student Dashboard (with Active Exam Session, Score Feedback, Marking Guide & Report Card View)
 async function renderStudentDashboard() {
     const container = document.getElementById('student-classes-cards');
     if (!container) return;
@@ -740,6 +737,35 @@ async function renderStudentDashboard() {
                             `;
                         }
                     }).join('')}
+
+                    <!-- STUDENT REPORT CARD GENERATOR SECTION -->
+                    <div class="mt-3 pt-3 border-t border-slate-800/80 space-y-2.5">
+                        <h5 class="text-xs font-bold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider">
+                            <i data-lucide="award" class="w-3.5 h-3.5 text-emerald-400"></i> My Report Card
+                        </h5>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-slate-400 font-medium mb-1">Academic Year</label>
+                                <select id="studentReportYear_${c.class_code}" class="w-full bg-slate-950 border border-slate-800 text-white rounded-lg p-1.5 text-xs focus:ring-1 focus:ring-emerald-500 outline-none">
+                                    <option value="2026" selected>2026</option>
+                                    <option value="2025">2025</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 font-medium mb-1">Term</label>
+                                <select id="studentReportTerm_${c.class_code}" class="w-full bg-slate-950 border border-slate-800 text-white rounded-lg p-1.5 text-xs focus:ring-1 focus:ring-emerald-500 outline-none">
+                                    <option value="Term 1">Term 1</option>
+                                    <option value="Term 2">Term 2</option>
+                                    <option value="Term 3" selected>Term 3</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button onclick="downloadMyReportCard('${c.class_code}', '${c.class_name || c.name || 'Class'}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-md">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i> Download My Report Card (PDF)
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -748,6 +774,34 @@ async function renderStudentDashboard() {
     if (window.lucide) lucide.createIcons();
 }
 
+// Student self-service PDF report downloader function
+async function downloadMyReportCard(classCode, className) {
+    const termSelect = document.getElementById(`studentReportTerm_${classCode}`);
+    const yearSelect = document.getElementById(`studentReportYear_${classCode}`);
+
+    const selectedTerm = termSelect ? termSelect.value : 'Term 3';
+    const selectedYear = yearSelect ? yearSelect.value : '2026';
+    const studentName = currentUser?.name || currentUser?.full_name || 'Student';
+
+    const { data: marks, error } = await supabaseClient
+        .from('student_marks')
+        .select('subject_name, marks_obtained, max_marks')
+        .eq('student_email', currentUser?.email)
+        .eq('term', selectedTerm)
+        .eq('academic_year', selectedYear);
+
+    if (error || !marks || marks.length === 0) {
+        alert(`No marks recorded for ${selectedTerm} (${selectedYear}).`);
+        return;
+    }
+
+    await generateReportCard(studentName, className, marks, {
+        name: currentUser?.school || "SMARTEDU ACADEMY",
+        location: currentUser?.school_location || "NYAGATARE",
+        term: selectedTerm,
+        year: selectedYear
+    });
+}
 // Open Exam Creation Modal for Teachers
 window.openCreateExamModal = function(classCode) {
     const modal = document.getElementById('exam-modal');
