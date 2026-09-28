@@ -1,176 +1,4 @@
 // ==========================================
-// 1. SUPABASE INITIALIZATION & SESSION MANAGEMENT
-// ==========================================
-const SUPABASE_URL = 'https://ggiwmwinrcxrkqcevqnz.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_SYYnHD1Ws3cz5lva25quxQ_ey7XgL4v';
-
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// Image URL Converter & Sanitizer
-function getDirectImageUrl(url) {
-    if (!url) return '';
-    let cleanUrl = url.trim();
-
-    // Convert Google Drive view URLs to direct image streams
-    if (cleanUrl.includes('drive.google.com/file/d/')) {
-        const fileId = cleanUrl.split('/d/')[1].split('/')[0];
-        return `https://lh3.googleusercontent.com/d/${fileId}=s220`;
-    }
-
-    // Convert Dropbox sharing links
-    if (cleanUrl.includes('dropbox.com')) {
-        return cleanUrl.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '');
-    }
-
-    // Add https if protocol is missing
-    if (!/^https?:\/\//i.test(cleanUrl)) {
-        return 'https://' + cleanUrl;
-    }
-
-    return cleanUrl;
-}
-
-// Session State Helper
-const Session = {
-    getUser: () => JSON.parse(localStorage.getItem('portal_current_user') || 'null'),
-    setUser: (user) => localStorage.setItem('portal_current_user', JSON.stringify(user)),
-    clear: () => localStorage.removeItem('portal_current_user')
-};
-
-let currentUser = Session.getUser();
-let jitsiApi = null; // Master instance for Live Video Classes
-
-// Master Admin Access Control
-const MASTER_ADMIN_EMAIL = 'schoolsystems.ange.rw@gmail.com';
-
-// App Initialization
-document.addEventListener('DOMContentLoaded', () => {
-    if (window.lucide) lucide.createIcons();
-    
-    setupAuthTabs();
-    setupEventListeners();
-    checkSession();
-});
-
-// Session Checker
-async function checkSession() {
-    currentUser = Session.getUser();
-    const userBadge = document.getElementById('user-badge');
-    const authStatus = document.getElementById('auth-status');
-    const logoutBtn = document.getElementById('logout-btn');
-
-    if (currentUser) {
-        // Re-verify user record with Supabase DB
-        const { data: dbUser } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('email', currentUser.email)
-            .maybeSingle();
-
-        if (dbUser) {
-            currentUser = dbUser;
-            Session.setUser(dbUser);
-        }
-
-        if (userBadge) {
-            userBadge.classList.remove('hidden');
-            userBadge.classList.add('flex');
-        }
-        if (authStatus) {
-            const displayRole = currentUser.email.toLowerCase() === MASTER_ADMIN_EMAIL ? 'SYSTEM OWNER' : currentUser.role.toUpperCase();
-            authStatus.textContent = `${currentUser.name || currentUser.full_name} (${displayRole})`;
-        }
-        if (logoutBtn) logoutBtn.classList.remove('hidden');
-
-        // Check teacher approval status
-        if (currentUser.role === 'teacher' && currentUser.account_status === 'pending') {
-            alert('Your account is awaiting payment verification by the System Owner.');
-            Session.clear();
-            checkSession();
-            return;
-        }
-
-        // Handle Master Owner Routing vs Roles
-        if (currentUser.email.toLowerCase() === MASTER_ADMIN_EMAIL) {
-            showRoleDashboard('owner');
-        } else {
-            showRoleDashboard(currentUser.role);
-        }
-    } else {
-        if (userBadge) userBadge.classList.add('hidden');
-        if (logoutBtn) logoutBtn.classList.add('hidden');
-        showAuthSection();
-    }
-}
-
-// Navigation Controls
-function hideAllSections() {
-    ['auth-section', 'owner-dashboard', 'teacher-dashboard', 'student-dashboard'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
-    });
-}
-
-function showAuthSection() {
-    hideAllSections();
-    const authSec = document.getElementById('auth-section');
-    if (authSec) authSec.classList.remove('hidden');
-}
-
-function showRoleDashboard(role) {
-    hideAllSections();
-    if (role === 'owner') {
-        const ownerDb = document.getElementById('owner-dashboard');
-        if (ownerDb) ownerDb.classList.remove('hidden');
-        renderOwnerDashboard();
-    } else if (role === 'teacher' || role === 'head_teacher') {
-        const teacherDb = document.getElementById('teacher-dashboard');
-        if (teacherDb) teacherDb.classList.remove('hidden');
-        renderTeacherDashboard();
-    } else if (role === 'student') {
-        const studentDb = document.getElementById('student-dashboard');
-        if (studentDb) studentDb.classList.remove('hidden');
-        renderStudentDashboard();
-    }
-}
-
-// Auth UI Navigation
-function setupAuthTabs() {
-    const tabLogin = document.getElementById('tab-login');
-    const tabRegister = document.getElementById('tab-register');
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-    const roleSelect = document.getElementById('reg-role');
-    const teacherFields = document.getElementById('teacher-fields');
-
-    if (tabLogin && tabRegister) {
-        tabLogin.addEventListener('click', () => {
-            tabLogin.className = 'flex-1 py-2 text-xs font-bold rounded-xl transition bg-indigo-600 text-white shadow-md';
-            tabRegister.className = 'flex-1 py-2 text-xs font-bold text-slate-400 hover:text-white transition';
-            if (loginForm) loginForm.classList.remove('hidden');
-            if (registerForm) registerForm.classList.add('hidden');
-        });
-
-        tabRegister.addEventListener('click', () => {
-            tabRegister.className = 'flex-1 py-2 text-xs font-bold rounded-xl transition bg-indigo-600 text-white shadow-md';
-            tabLogin.className = 'flex-1 py-2 text-xs font-bold text-slate-400 hover:text-white transition';
-            if (registerForm) registerForm.classList.remove('hidden');
-            if (loginForm) loginForm.classList.add('hidden');
-        });
-    }
-
-    if (roleSelect && teacherFields) {
-        roleSelect.addEventListener('change', (e) => {
-            if (e.target.value === 'teacher') {
-                teacherFields.classList.remove('hidden');
-            } else {
-                teacherFields.classList.add('hidden');
-            }
-        });
-    }
-}
-
-// ==========================================
 // 2. EVENT LISTENERS & REGISTRATION (ACE2026 VALIDATION)
 // ==========================================
 function setupEventListeners() {
@@ -179,14 +7,21 @@ function setupEventListeners() {
     if (registerForm) {
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const role = document.getElementById('reg-role')?.value || '';
-            const name = document.getElementById('reg-name')?.value || '';
-            const email = document.getElementById('reg-email')?.value || '';
-            const phone = document.getElementById('reg-phone')?.value || '';
+            const role = document.getElementById('reg-role')?.value || 'student';
+            const schoolCode = document.getElementById('reg-school-code')?.value.trim().toUpperCase() || 'ACE2026';
+            const name = document.getElementById('reg-name')?.value.trim() || '';
+            const email = document.getElementById('reg-email')?.value.trim() || '';
+            const phone = document.getElementById('reg-phone')?.value.trim() || '';
             const password = document.getElementById('reg-password')?.value || '';
 
             if (!email || !name) {
                 alert('Please enter your name and email address.');
+                return;
+            }
+
+            // Verify School Code
+            if (schoolCode !== 'ACE2026') {
+                alert('Invalid School Code! Please enter ACE2026.');
                 return;
             }
 
@@ -202,7 +37,8 @@ function setupEventListeners() {
                 return;
             }
 
-            const rawLogoUrl = role === 'teacher' ? (document.getElementById('reg-school-logo')?.value || '') : '';
+            const isStaff = (role === 'teacher' || role === 'head_teacher');
+            const rawLogoUrl = isStaff ? (document.getElementById('reg-school-logo')?.value || '') : '';
             const finalRole = email.toLowerCase() === MASTER_ADMIN_EMAIL ? 'owner' : role;
 
             const newUser = {
@@ -213,12 +49,13 @@ function setupEventListeners() {
                 phone: phone,
                 phone_number: phone,
                 password: password,
-                account_status: role === 'teacher' ? 'pending' : 'active',
-                school: role === 'teacher' ? (document.getElementById('reg-school')?.value || 'SmartEdu School') : '',
-                school_location: role === 'teacher' ? (document.getElementById('reg-school-location')?.value || '') : '',
-                position: role === 'teacher' ? (document.getElementById('reg-position')?.value || '') : '',
+                school_code: schoolCode,
+                account_status: isStaff ? 'pending' : 'active',
+                school: isStaff ? (document.getElementById('reg-school')?.value || 'SmartEdu School') : '',
+                school_location: isStaff ? (document.getElementById('reg-school-location')?.value || '') : '',
+                position: isStaff ? (document.getElementById('reg-position')?.value || (role === 'head_teacher' ? 'Head Teacher' : 'Teacher')) : '',
                 school_logo_url: typeof getDirectImageUrl === 'function' ? getDirectImageUrl(rawLogoUrl) : rawLogoUrl,
-                payment_ref: role === 'teacher' ? (document.getElementById('reg-payment-ref')?.value || '') : ''
+                payment_ref: isStaff ? (document.getElementById('reg-payment-ref')?.value || '') : ''
             };
 
             const { data: insertedData, error } = await supabaseClient
@@ -237,8 +74,8 @@ function setupEventListeners() {
             localStorage.setItem('user', JSON.stringify(savedProfile));
             window.currentUserProfile = savedProfile;
 
-            if (role === 'teacher') {
-                alert('Teacher account registered! Pending payment approval by System Owner.');
+            if (isStaff) {
+                alert('Staff/Head Teacher account registered! Pending payment approval by System Owner.');
             } else {
                 alert('Account created successfully! You can now log in.');
             }
@@ -253,7 +90,7 @@ function setupEventListeners() {
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('login-email').value;
+            const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
 
             const { data: user, error } = await supabaseClient
@@ -356,7 +193,6 @@ function setupEventListeners() {
         });
     }
 }
-
 // ==========================================
 // 3. LIVE CLASSROOM ENGINE (JITSI MEET)
 // ==========================================
