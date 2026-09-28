@@ -1014,3 +1014,57 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
 }
 
 window.generateReportCard = generateReportCard;
+// ==========================================
+// 7. USER DIRECTORY RENDERER (SUPER ADMIN)
+// ==========================================
+window.loadUserDirectory = async function() {
+    const tbody = document.getElementById('user-directory-tbody');
+    if (!tbody) return;
+
+    try {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-indigo-400 font-mono">Loading user directory...</td></tr>`;
+
+        const { data: profiles, error } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!profiles || profiles.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-500">No registered users found.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = profiles.map(user => {
+            const displayName = user.name || user.full_name || user.username || 'N/A';
+            const roleDisplay = user.email.toLowerCase() === 'schoolsystems.ange.rw@gmail.com' 
+                ? '<span class="bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded font-bold uppercase text-[10px]">Super Admin</span>'
+                : `<span class="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded font-bold uppercase text-[10px]">${user.role || 'User'}</span>`;
+
+            const statusDisplay = user.account_status === 'pending'
+                ? '<span class="text-amber-400 font-bold">⏳ Pending Payment</span>'
+                : '<span class="text-emerald-400 font-bold">✅ Active</span>';
+
+            return `
+                <tr class="hover:bg-slate-800/40 transition-colors border-b border-slate-800/50">
+                    <td class="py-3 px-4 font-bold text-white">${displayName}</td>
+                    <td class="py-3 px-4">${roleDisplay}</td>
+                    <td class="py-3 px-4 font-mono text-indigo-300">${user.email || 'N/A'}</td>
+                    <td class="py-3 px-4">${statusDisplay}</td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error('Error loading user directory:', err);
+        tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-rose-400">Failed to load user directory: ${err.message || 'Database error'}</td></tr>`;
+    }
+};
+
+// Auto-trigger directory loader if present on DOM load
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('user-directory-tbody') && typeof window.loadUserDirectory === 'function') {
+        window.loadUserDirectory();
+    }
+});
