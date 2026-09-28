@@ -1,325 +1,148 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-slate-950">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartEdu Portal - Learning & Interactive Exam Platform</title>
-
-    <!-- Speed up DNS resolution and preconnect to CDNs -->
-    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
-    <link rel="preconnect" href="https://unpkg.com" crossorigin>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-    <!-- Tailwind CSS -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartEdu Platform Portal System</title>
+    
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Supabase JS Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <!-- HTML2Canvas & jsPDF (Required for Report Card Generation) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
+    
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-
+    
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- jsPDF Library for Report Cards -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
     <!-- Jitsi Meet API -->
-    <script src="https://meet.jit.si/external_api.js" defer></script>
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <!-- Custom styling & CSS animations -->
+    <script src="https://meet.jit.si/external_api.js"></script>
+    
     <style>
-        body { 
-            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-            background-color: #0f172a;
-            color: #f8fafc;
-            margin: 0;
+        /* Custom Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
-        
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
         }
-
-        /* Continuous Smooth Ticker Animation */
-        @keyframes marquee {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
         }
-
-        .animate-marquee {
-            display: inline-block !important;
-            white-space: nowrap !important;
-            animation: marquee 22s linear infinite !important;
-            will-change: transform;
-        }
-
-        .animate-marquee:hover {
-            animation-play-state: paused;
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
         }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+<body class="min-h-full flex flex-col bg-slate-950 text-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white">
 
-    <!-- Top Navigation Header -->
-    <header class="border-b border-slate-800 bg-slate-950/80 sticky top-0 z-50 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+    <!-- NAVIGATION HEADER -->
+    <header class="w-full bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand Logo -->
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center font-black text-white shadow-lg shadow-indigo-500/20">
-                    S
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/20">
+                    SE
                 </div>
                 <div>
-                    <h1 class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">SmartEdu Platform</h1>
-                    <p class="text-[10px] text-indigo-400 font-semibold tracking-wider uppercase" id="school-branding-sub">Portal System</p>
+                    <h1 class="text-white font-bold text-base tracking-wide flex items-center gap-2">
+                        SmartEdu <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Portal</span>
+                    </h1>
                 </div>
             </div>
 
-            <div class="flex items-center gap-4">
-                <div id="user-badge" class="hidden items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
-                    <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                    <span id="auth-status" class="text-xs font-semibold text-slate-300">Not Signed In</span>
+            <!-- User Auth Profile Status Header -->
+            <div id="user-header-profile" class="hidden flex items-center gap-4">
+                <div class="text-right hidden sm:block">
+                    <p id="header-user-name" class="text-sm font-bold text-white leading-tight"></p>
+                    <p id="header-user-role" class="text-xs text-indigo-400 font-medium capitalize"></p>
                 </div>
-                <button id="logout-btn" class="hidden bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs px-3 py-1.5 rounded-xl font-bold transition">
-                    Logout
+                <button onclick="window.handleLogout()" class="bg-slate-800 hover:bg-red-500/10 text-slate-300 hover:text-red-400 border border-slate-700 hover:border-red-500/30 px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                    <i data-lucide="log-out" class="w-4 h-4"></i> Logout
                 </button>
             </div>
         </div>
-        <!-- MOVING ANNOUNCEMENT TICKER BANNER -->
-    <div class="w-full bg-gradient-to-r from-indigo-950 via-purple-950 to-slate-900 text-indigo-100 py-2 px-4 overflow-hidden border-t border-indigo-800/40">
-        <div class="flex items-center gap-3 max-w-7xl mx-auto">
-            <span class="bg-indigo-600 text-white text-[10px] uppercase px-2.5 py-0.5 rounded-full font-extrabold tracking-wider shrink-0 animate-pulse">
-                Announcements
-            </span>
-            <div class="overflow-hidden whitespace-nowrap w-full">
-                <div class="inline-block animate-marquee font-medium text-xs tracking-wide text-indigo-200">
-                    🚀 Welcome to SmartEdu Portal • 📚 Interactive Live Classroom Sessions Active • 📝 Auto-Graded Exams & Marks Analytics Ready • 💻 Designed & Maintained by School Systems Rwanda (schoolsystems.ange.rw@gmail.com) •
-                </div>
-            </div>
-        </div>
-    </div>
     </header>
 
-    <!-- Main Content Body -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
+    <!-- MAIN CONTENT ROUTER CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
 
-        <!-- AUTH & REGISTRATION SECTION -->
-        <section id="auth-section" class="max-w-md mx-auto my-8">
-            <div class="bg-slate-800/60 border border-slate-700/60 rounded-3xl p-6 md:p-8 backdrop-blur-xl shadow-2xl">
-                
-                <!-- Auth Tabs -->
-                <div class="flex bg-slate-900/80 p-1 rounded-2xl mb-6 border border-slate-800">
-                    <button id="tab-login" class="flex-1 py-2 text-xs font-bold rounded-xl transition bg-indigo-600 text-white shadow-md">Sign In</button>
-                    <button id="tab-register" class="flex-1 py-2 text-xs font-bold text-slate-400 hover:text-white transition">Register Account</button>
+        <!-- AUTH SECTION (LOGIN / REGISTER) -->
+        <section id="auth-section" class="max-w-md mx-auto my-12 bg-slate-900/90 border border-slate-800 rounded-3xl p-8 shadow-2xl backdrop-blur-xl">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-black text-white tracking-tight">Welcome Back</h2>
+                <p class="text-xs text-slate-400 mt-1">Access your interactive learning dashboard</p>
+            </div>
+
+            <!-- Auth Form -->
+            <form id="auth-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">Email Address</label>
+                    <input type="email" id="auth-email" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition" placeholder="name@school.com" />
                 </div>
 
-                <!-- Login Form -->
-                <form id="login-form" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">Email Address</label>
-                        <input type="email" id="login-email" required class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition text-white" placeholder="yourname@school.com">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">Password</label>
-                        <input type="password" id="login-password" required class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition text-white" placeholder="••••••••">
-                    </div>
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-indigo-600/30 text-sm">
-                        Access Portal
-                    </button>
-                </form>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">Password</label>
+                    <input type="password" id="auth-password" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition" placeholder="••••••••" />
+                </div>
 
-                <!-- Registration Form -->
-                <form id="register-form" class="space-y-4 hidden">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">Account Role</label>
-                        <select id="reg-role" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition text-white">
-                            <option value="student">Student</option>
-                            <option value="teacher">Teacher / School Admin</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">Full Name</label>
-                        <input type="text" id="reg-name" required class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none text-white" placeholder="Marie Claire">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">Email</label>
-                        <input type="email" id="reg-email" required class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none text-white" placeholder="email@domain.com">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">Phone Number</label>
-                        <input type="tel" id="reg-phone" required class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none text-white" placeholder="+250 780 000 000">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">Password</label>
-                        <input type="password" id="reg-password" required class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none text-white" placeholder="••••••••">
-                    </div>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl text-sm transition shadow-lg shadow-indigo-600/30 mt-2">
+                    Sign In to Portal
+                </button>
+            </form>
+        </section>
 
-                    <!-- Extra Fields for Teachers / School Administrators -->
-                    <div id="teacher-fields" class="space-y-3 hidden pt-3 border-t border-slate-700/60">
-                        
-                        <!-- System Owner Payment Banner -->
-                        <div class="bg-indigo-950/80 border border-indigo-700/80 rounded-xl p-3.5 text-xs text-indigo-200 space-y-1">
-                            <p class="font-bold text-white flex items-center gap-1.5">
-                                <i data-lucide="info" class="w-4 h-4 text-indigo-400"></i> Account Activation & Payment Notice
-                            </p>
-                            <p>Teacher accounts require payment verification by the System Owner before activation.</p>
-                            <p class="text-amber-300 font-medium">Contact the System Owner to arrange payment:</p>
-                            <p class="font-mono bg-slate-950/80 p-2 rounded-lg text-indigo-300 select-all font-bold text-center border border-indigo-900/50">
-                                schoolsystems.ange.rw@gmail.com
-                            </p>
-                        </div>
+        <!-- OWNER / SUPER ADMIN DASHBOARD -->
+        <section id="owner-dashboard" class="hidden space-y-8">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-5">
+                <div>
+                    <h2 class="text-2xl font-black text-white">Platform Super Admin</h2>
+                    <p class="text-xs text-slate-400">System user management and platform controls</p>
+                </div>
+            </div>
 
-                        <div>
-                            <label class="block text-xs font-bold text-indigo-400 mb-1">School Name</label>
-                            <input type="text" id="reg-school" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none text-white" placeholder="e.g. Hope Academy">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-indigo-400 mb-1">School Location</label>
-                            <input type="text" id="reg-school-location" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none text-white" placeholder="e.g. Nyagatare District, Eastern Province">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-indigo-400 mb-1">Position / Title</label>
-                            <select id="reg-position" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none text-white">
-                                <option value="Teacher">Teacher</option>
-                                <option value="Head Teacher">Head Teacher</option>
-                                <option value="Dean of Studies (DOS)">Dean of Studies (DOS)</option>
-                                <option value="Director">Director</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-indigo-400 mb-1">School Logo (PNG Image URL)</label>
-                            <input type="url" id="reg-school-logo" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none text-white" placeholder="https://example.com/logo.png">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-indigo-400 mb-1">Mobile Money Payment Ref ID</label>
-                            <input type="text" id="reg-payment-ref" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none text-white" placeholder="Transaction Code (e.g. TXN1049283721)">
-                        </div>
-                    </div>
-
-                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-600/30 text-sm">
-                        Create Account
-                    </button>
-                </form>
-
+            <!-- User Directory Panel -->
+            <div class="bg-slate-900/60 border border-slate-800 rounded-3xl p-6">
+                <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <i data-lucide="users" class="text-indigo-400"></i> Platform User Directory
+                </h3>
+                <div id="owner-user-directory" class="overflow-x-auto">
+                    <!-- Dynamic User Directory Table from app.js -->
+                </div>
             </div>
         </section>
 
-        <!-- OWNER (SUPER ADMIN) DASHBOARD -->
-        <section id="owner-dashboard" class="hidden space-y-6">
-            <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <div>
-                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                            <i data-lucide="shield-check" class="text-indigo-400"></i> Owner Control Panel
-                        </h2>
-                        <p class="text-xs text-slate-400">Manage platform registrations and payment approvals</p>
-                    </div>
-                </div>
-
-                <h3 class="text-sm font-bold text-amber-400 uppercase tracking-wider mb-3">Pending Payment Approvals</h3>
-                <div id="owner-pending-list" class="space-y-3">
-                    <!-- Dynamic insertion from app.js -->
-                </div>
-            </div>
-        <!-- OWNER HELP DESK & SUGGESTIONS INBOX -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 mt-6 shadow-xl">
-            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-                <div>
-                    <h3 class="text-white font-extrabold text-lg flex items-center gap-2">
-                        <span>📩</span> Help Desk & User Suggestions Inbox
-                    </h3>
-                    <p class="text-xs text-slate-400 mt-1">Live complaints and feedback submitted by system users.</p>
-                </div>
-                <button onclick="loadHelpTickets()" class="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors">
-                    🔄 Refresh Inbox
-                </button>
-            </div>
-
-            <div class="overflow-x-auto mt-4">
-                <table class="w-full text-left text-xs">
-                   <thead>
-                        <tr class="text-slate-400 border-b border-slate-800 uppercase tracking-wider text-[10px]">
-                            <th class="py-3 px-4">Date</th>
-                            <th class="py-3 px-4">Sender Info</th>
-                            <th class="py-3 px-4">Category</th>
-                            <th class="py-3 px-4">Message</th>
-                            <th class="py-3 px-4">Status & Reply</th>
-                            <th class="py-3 px-4">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="help-tickets-tbody" class="divide-y divide-slate-800/60 text-slate-300">
-                        <tr>
-                            <td colspan="6" class="py-6 text-center text-slate-500">Loading help tickets...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- USER DIRECTORY SECTION -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 mt-6 shadow-xl">
-            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-                <div>
-                    <h3 class="text-white font-extrabold text-lg flex items-center gap-2">
-                        <span>👥</span> System User Directory
-                    </h3>
-                    <p class="text-xs text-slate-400 mt-1">Full roster of all registered students, teachers, and administrators.</p>
-                </div>
-                <button onclick="loadUserDirectory()" class="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors">
-                    🔄 Refresh Directory
-                </button>
-            </div>
-
-            <div class="overflow-x-auto mt-4">
-                <table class="w-full text-left text-xs">
-                    <thead>
-                        <tr class="text-slate-400 border-b border-slate-800 uppercase tracking-wider text-[10px]">
-                            <th class="py-3 px-4">User</th>
-                            <th class="py-3 px-4">Role</th>
-                            <th class="py-3 px-4">Email</th>
-                            <th class="py-3 px-4">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="user-directory-tbody" class="divide-y divide-slate-800/60 text-slate-300">
-                        <tr>
-                            <td colspan="4" class="py-6 text-center text-slate-500">Loading registered users...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
- </section>
         <!-- TEACHER DASHBOARD -->
-        <section id="teacher-dashboard" class="hidden space-y-6">
+        <section id="teacher-dashboard" class="hidden space-y-8">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-5">
+                <div>
+                    <h2 class="text-2xl font-black text-white">Teacher Portal</h2>
+                    <p class="text-xs text-slate-400">Manage classrooms, assessments, and stream live lectures</p>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                <!-- Quick Class Generator -->
-                <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6">
+                <!-- Create Class Card -->
+                <div class="bg-slate-900/60 border border-slate-800 rounded-3xl p-6">
                     <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                        <i data-lucide="plus-circle" class="text-indigo-400"></i> Create Class
+                        <i data-lucide="plus-circle" class="text-emerald-400"></i> Create New Class
                     </h3>
                     <form id="create-class-form" class="space-y-4">
                         <div>
-                            <label class="block text-xs font-bold text-slate-400 mb-1">Class Name</label>
-                            <input type="text" id="class-name" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white" placeholder="Primary 5 English">
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Classroom Title</label>
+                            <input type="text" id="create-class-title" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-500" placeholder="e.g. Primary 6 English Grammar" />
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-400 mb-1">Subject</label>
-                            <input type="text" id="class-subject" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white" placeholder="English Grammar & Writing">
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Subject</label>
+                            <input type="text" id="create-class-subject" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-500" placeholder="e.g. English" />
                         </div>
-                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition">
-                            Generate Class Code
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-sm transition shadow-lg shadow-emerald-600/20">
+                            Create Classroom
                         </button>
                     </form>
                 </div>
@@ -333,7 +156,6 @@
                         <!-- Dynamic insertion from app.js -->
                     </div>
                 </div>
-
             </div>
         </section>
 
@@ -363,45 +185,46 @@
                     <!-- Dynamic insertion from app.js -->
                 </div>
             </div>
+
             <!-- REPORT CARD GENERATOR SECTION -->
-<div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6 mt-6">
-  <h3 class="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2">
-    <i data-lucide="file-text" class="text-emerald-400"></i> Generate Student Report Card
-  </h3>
+            <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6 mt-6">
+                <h3 class="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2">
+                    <i data-lucide="file-text" class="text-emerald-400"></i> Generate Student Report Card
+                </h3>
 
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-    <!-- Academic Year -->
-    <div>
-      <label class="block text-xs text-slate-300 font-medium mb-1">Academic Year</label>
-      <select id="reportYear" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-        <option value="2026" selected>2026</option>
-        <option value="2025">2025</option>
-      </select>
-    </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <!-- Academic Year -->
+                    <div>
+                        <label class="block text-xs text-slate-300 font-medium mb-1">Academic Year</label>
+                        <select id="reportYear" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                            <option value="2026" selected>2026</option>
+                            <option value="2025">2025</option>
+                        </select>
+                    </div>
 
-    <!-- Term -->
-    <div>
-      <label class="block text-xs text-slate-300 font-medium mb-1">Term</label>
-      <select id="reportTerm" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-        <option value="Term 1">Term 1</option>
-        <option value="Term 2">Term 2</option>
-        <option value="Term 3" selected>Term 3</option>
-      </select>
-    </div>
+                    <!-- Term -->
+                    <div>
+                        <label class="block text-xs text-slate-300 font-medium mb-1">Term</label>
+                        <select id="reportTerm" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                            <option value="Term 1">Term 1</option>
+                            <option value="Term 2">Term 2</option>
+                            <option value="Term 3" selected>Term 3</option>
+                        </select>
+                    </div>
 
-    <!-- Student Select -->
-    <div>
-      <label class="block text-xs text-slate-300 font-medium mb-1">Select Student</label>
-      <select id="reportStudentSelect" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-        <option value="">-- Choose Student --</option>
-      </select>
-    </div>
-  </div>
+                    <!-- Student Select -->
+                    <div>
+                        <label class="block text-xs text-slate-300 font-medium mb-1">Select Student</label>
+                        <select id="reportStudentSelect" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                            <option value="">-- Choose Student --</option>
+                        </select>
+                    </div>
+                </div>
 
-  <button id="btnGenerateReport" onclick="handleGenerateReport()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-lg text-sm transition flex items-center justify-center gap-2 shadow-lg">
-    <i data-lucide="download"></i> Download Report Card (PDF)
-  </button>
-</div>
+                <button id="btnGenerateReport" onclick="handleGenerateReport()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-lg text-sm transition flex items-center justify-center gap-2 shadow-lg">
+                    <i data-lucide="download"></i> Download Report Card (PDF)
+                </button>
+            </div>
         </section>
 
     </main>
@@ -444,119 +267,117 @@
         </div>
     </div>
 
-    <!-- Connect JavaScript application script -->
-    <script src="app.js"></script>
-    <!-- Class Exam Modal -->
-<div id="exam-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl">
-        <div class="p-5 border-b border-slate-800 flex justify-between items-center">
-            <div>
-                <h3 id="exam-modal-title" class="font-bold text-white text-base">Class Exam</h3>
-                <p id="exam-modal-subtitle" class="text-xs text-slate-400"></p>
-            </div>
-            <button onclick="window.closeExamModal()" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
-        </div>
-        <div id="exam-modal-body" class="p-5 max-h-[70vh] overflow-y-auto"></div>
-        <div id="exam-modal-footer" class="p-4 bg-slate-950 border-t border-slate-800 flex justify-end gap-3"></div>
-    </div>
-</div>
     <!-- FLOATING HELP DESK BUTTON -->
-<button onclick="toggleHelpModal(true)" class="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-4 py-3 rounded-full shadow-2xl flex items-center gap-2.5 font-bold text-sm tracking-wide transition-all transform hover:scale-105 border border-indigo-400/30">
-    <span>💬</span> Help & Support
-</button>
-<!-- HELP DESK MODAL WITH USER RESPONSE TRACKING -->
-<div id="help-desk-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between pb-4 border-b border-slate-800">
-            <div>
-                <h3 class="text-white font-bold text-lg flex items-center gap-2">
-                    <span>📩</span> Help Desk & Support
-                </h3>
-                <p class="text-xs text-slate-400 mt-0.5">Submit feedback or review replies from platform management.</p>
-            </div>
-            <button onclick="toggleHelpModal(false)" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
-        </div>
+    <button onclick="toggleHelpModal(true)" class="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-4 py-3 rounded-full shadow-2xl flex items-center gap-2.5 font-bold text-sm tracking-wide transition-all transform hover:scale-105 border border-indigo-400/30">
+        <span>💬</span> Help & Support
+    </button>
 
-        <!-- Navigation Tabs -->
-        <div class="flex gap-4 border-b border-slate-800 mt-4 mb-4 text-xs font-bold">
-            <button id="tab-btn-new" onclick="switchHelpTab('new')" class="pb-2 border-b-2 border-indigo-500 text-indigo-400">
-                ➕ New Submission
-            </button>
-            <button id="tab-btn-history" onclick="switchHelpTab('history'); loadMyTickets();" class="pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200">
-                📜 My Tickets & Replies
-            </button>
-        </div>
-<!-- TAB 1: New Ticket Form -->
-        <form id="help-desk-form" class="space-y-4">
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Your Name</label>
-                <input type="text" id="help-user-name" placeholder="Enter your full name" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" />
+    <!-- HELP DESK MODAL WITH USER RESPONSE TRACKING -->
+    <div id="help-desk-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div>
+                    <h3 class="text-white font-bold text-lg flex items-center gap-2">
+                        <span>📩</span> Help Desk & Support
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Submit feedback or review replies from platform management.</p>
+                </div>
+                <button onclick="toggleHelpModal(false)" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
             </div>
 
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Your Email</label>
-                <input type="email" id="help-user-email" placeholder="Enter your email address" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" />
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Phone Number (Optional)</label>
-                <input type="tel" id="help-user-phone" placeholder="Enter phone number" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" />
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Issue Category</label>
-                <select id="help-category" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
-                    <option value="Technical Issue / Bug">Technical Issue / Bug</option>
-                    <option value="Classroom & Live Stream">Classroom & Live Stream</option>
-                    <option value="Feature Suggestion">Feature Suggestion</option>
-                    <option value="General Inquiry">General Inquiry</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Detailed Message / Complaint</label>
-                <textarea id="help-message" rows="4" required placeholder="Describe your issue or suggestion..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
-            </div>
-
-            <div class="flex items-center justify-end gap-3 pt-2">
-                <button type="button" onclick="toggleHelpModal(false)" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white">Cancel</button>
-                <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg font-bold text-xs shadow-lg transition-colors">
-                    Send Submission
+            <!-- Navigation Tabs -->
+            <div class="flex gap-4 border-b border-slate-800 mt-4 mb-4 text-xs font-bold">
+                <button id="tab-btn-new" onclick="switchHelpTab('new')" class="pb-2 border-b-2 border-indigo-500 text-indigo-400">
+                    ➕ New Submission
+                </button>
+                <button id="tab-btn-history" onclick="switchHelpTab('history'); loadMyTickets();" class="pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200">
+                    📜 My Tickets & Replies
                 </button>
             </div>
-        </form>
 
-        <!-- TAB 2: User's Past Tickets & Owner Responses -->
-        <div id="help-history-view" class="hidden space-y-3">
-            <div id="my-tickets-container" class="space-y-3">
-                <p class="text-xs text-slate-500 text-center py-4">Loading your tickets...</p>
+            <!-- TAB 1: New Ticket Form -->
+            <form id="help-desk-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Your Name</label>
+                    <input type="text" id="help-user-name" placeholder="Enter your full name" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Your Email</label>
+                    <input type="email" id="help-user-email" placeholder="Enter your email address" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Phone Number (Optional)</label>
+                    <input type="tel" id="help-user-phone" placeholder="Enter phone number" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Issue Category</label>
+                    <select id="help-category" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <option value="Technical Issue / Bug">Technical Issue / Bug</option>
+                        <option value="Classroom & Live Stream">Classroom & Live Stream</option>
+                        <option value="Feature Suggestion">Feature Suggestion</option>
+                        <option value="General Inquiry">General Inquiry</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Detailed Message / Complaint</label>
+                    <textarea id="help-message" rows="4" required placeholder="Describe your issue or suggestion..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" onclick="toggleHelpModal(false)" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white">Cancel</button>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg font-bold text-xs shadow-lg transition-colors">
+                        Send Submission
+                    </button>
+                </div>
+            </form>
+
+            <!-- TAB 2: User's Past Tickets & Owner Responses -->
+            <div id="help-history-view" class="hidden space-y-3">
+                <div id="my-tickets-container" class="space-y-3">
+                    <p class="text-xs text-slate-500 text-center py-4">Loading your tickets...</p>
+                </div>
             </div>
         </div>
-    <!-- BEAUTIFUL CREATOR & DESIGNER FOOTER -->
-<footer class="w-full bg-slate-950 border-t border-slate-800/80 text-slate-400 py-6 px-4 mt-auto">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
-        <!-- System Info -->
-        <div>
-            <h4 class="text-white font-bold text-base tracking-wide flex items-center justify-center md:justify-start gap-2">
-                <span>🎓</span> SmartEdu Platform Portal System
-            </h4>
-            <p class="text-xs text-slate-500 mt-1">Empowering modern digital education and interactive live classrooms.</p>
-        </div>
+    </div>
 
-        <!-- Creator & Contact Info -->
-        <div class="flex flex-col items-center md:items-end">
-            <span class="text-[11px] text-slate-400 uppercase font-extrabold tracking-wider">
-                IT Creator & Designer
-            </span>
-            <a href="mailto:schoolsystems.ange.rw@gmail.com" class="text-sm font-semibold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1.5 mt-0.5">
-                ✉️ schoolsystems.ange.rw@gmail.com
-            </a>
+    <!-- CREATOR & DESIGNER FOOTER -->
+    <footer class="w-full bg-slate-950 border-t border-slate-800/80 text-slate-400 py-6 px-4 mt-auto">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+            <!-- System Info -->
+            <div>
+                <h4 class="text-white font-bold text-base tracking-wide flex items-center justify-center md:justify-start gap-2">
+                    <span>🎓</span> SmartEdu Platform Portal System
+                </h4>
+                <p class="text-xs text-slate-500 mt-1">Empowering modern digital education and interactive live classrooms.</p>
+            </div>
+
+            <!-- Creator & Contact Info -->
+            <div class="flex flex-col items-center md:items-end">
+                <span class="text-[11px] text-slate-400 uppercase font-extrabold tracking-wider">
+                    IT Creator & Designer
+                </span>
+                <a href="mailto:schoolsystems.ange.rw@gmail.com" class="text-sm font-semibold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1.5 mt-0.5">
+                    ✉️ schoolsystems.ange.rw@gmail.com
+                </a>
+            </div>
         </div>
-    </div>
-    
-    <div class="max-w-7xl mx-auto border-t border-slate-900 mt-4 pt-4 text-center text-xs text-slate-600">
-        © 2026 SmartEdu. All rights reserved. Designed & Maintained by School Systems Rwanda.
-    </div>
-</footer>
+        
+        <div class="max-w-7xl mx-auto border-t border-slate-900 mt-4 pt-4 text-center text-xs text-slate-600">
+            © 2026 SmartEdu. All rights reserved. Designed & Maintained by School Systems Rwanda.
+        </div>
+    </footer>
+
+    <!-- Connect JavaScript application script -->
+    <script src="app.js"></script>
+    <script>
+        // Initialize Lucide icons
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    </script>
 </body>
 </html>
