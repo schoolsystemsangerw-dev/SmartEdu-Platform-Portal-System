@@ -540,11 +540,13 @@ window.approveUser = async function(email) {
     renderOwnerDashboard();
     alert(`Account approved successfully! The user can now access their portal.`);
 };
-
 // Teacher Dashboard (with Exam Creation, Results Tracking & Report Card Generation)
 async function renderTeacherDashboard() {
     const container = document.getElementById('teacher-classes-cards');
     if (!container) return;
+
+    // Safely retrieve the current user session
+    const currentUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
 
     const { data: classes, error } = await supabaseClient
         .from('classes')
@@ -578,9 +580,9 @@ async function renderTeacherDashboard() {
                         ${logoUrl ? `
                             <div class="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950 p-1">
                                 <img src="${logoUrl}" 
-                                     alt="School Logo" 
-                                     class="w-full h-full object-contain rounded-lg"
-                                     onerror="this.onerror=null; this.parentElement.style.display='none';" />
+                                   alt="School Logo" 
+                                   class="w-full h-full object-contain rounded-lg"
+                                   onerror="this.onerror=null; this.parentElement.style.display='none';" />
                             </div>
                         ` : ''}
                     </div>
@@ -665,7 +667,6 @@ async function renderTeacherDashboard() {
         }
     });
 }
-
 // Student Dashboard (with Active Exam Session, Score Feedback, Marking Guide & Report Card View)
 async function renderStudentDashboard() {
     const container = document.getElementById('student-classes-cards');
