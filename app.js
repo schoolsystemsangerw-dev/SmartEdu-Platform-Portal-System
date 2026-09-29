@@ -124,11 +124,16 @@ function showAuthSection() {
 
 function showRoleDashboard(role) {
     hideAllSections();
-    if (role === 'owner') {
+    
+    // Get actual logged-in user role from session to prevent mismatched calls
+    const activeUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const actualRole = activeUser.role || role;
+
+    if (actualRole === 'owner') {
         const ownerDb = document.getElementById('owner-dashboard');
         if (ownerDb) ownerDb.classList.remove('hidden');
-        renderOwnerDashboard();
-    } else if (role === 'head-teacher') {
+        if (typeof renderOwnerDashboard === 'function') renderOwnerDashboard();
+    } else if (actualRole === 'head-teacher') {
         const headTeacherDb = document.getElementById('head-teacher-dashboard');
         if (headTeacherDb) headTeacherDb.classList.remove('hidden');
         if (typeof renderHeadTeacherDashboard === 'function') {
@@ -136,14 +141,14 @@ function showRoleDashboard(role) {
         } else if (typeof loadHeadTeacherData === 'function') {
             loadHeadTeacherData();
         }
-    } else if (role === 'teacher') {
+    } else if (actualRole === 'teacher') {
         const teacherDb = document.getElementById('teacher-dashboard');
         if (teacherDb) teacherDb.classList.remove('hidden');
-        renderTeacherDashboard();
-    } else if (role === 'student') {
+        if (typeof renderTeacherDashboard === 'function') renderTeacherDashboard();
+    } else if (actualRole === 'student') {
         const studentDb = document.getElementById('student-dashboard');
         if (studentDb) studentDb.classList.remove('hidden');
-        renderStudentDashboard();
+        if (typeof renderStudentDashboard === 'function') renderStudentDashboard();
     }
 }
 // Auth UI Navigation
