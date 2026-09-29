@@ -2142,16 +2142,22 @@ async function approveStaff(userId) {
 document.addEventListener('DOMContentLoaded', () => {
     renderHeadTeacherDashboard();
 });
-// Automatically initialize the correct dashboard view when the page finishes loading (Mutual Exclusive)
-document.addEventListener('DOMContentLoaded', () => {
-    currentUser = Session.getUser();
+// ==========================================
+// Single Master Dashboard Dispatcher
+// ==========================================
+if (window.hasInitializedDashboard !== true) {
+    window.hasInitializedDashboard = true;
 
-    // Only run the function that matches the current page's unique container
-    if (document.getElementById('ht-staff-list')) {
-        renderHeadTeacherDashboard();
-    } else if (document.getElementById('teacher-classes-cards')) {
-        renderTeacherDashboard();
-    } else if (document.getElementById('student-classes-cards')) {
-        renderStudentDashboard();
-    }
-});
+    document.addEventListener('DOMContentLoaded', () => {
+        const activeUser = Session.getUser();
+        console.log('Master Dispatcher Triggered. Active User:', activeUser);
+
+        if (document.getElementById('ht-staff-list')) {
+            renderHeadTeacherDashboard();
+        } else if (document.getElementById('teacher-classes-cards')) {
+            renderTeacherDashboard();
+        } else if (document.getElementById('student-classes-cards')) {
+            renderStudentDashboard();
+        }
+    });
+}
