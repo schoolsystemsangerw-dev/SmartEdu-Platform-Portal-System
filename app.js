@@ -1985,8 +1985,7 @@ function switchHtTab(tabName) {
         }
     });
 }
-
-// Data Loader & Renderer for Head Teacher Dashboard
+// Data Loader & Renderer for Head Teacher Dashboard (Staff & Students)
 async function renderHeadTeacherDashboard() {
     const currentUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
     const schoolName = currentUser.school || '';
@@ -1996,144 +1995,79 @@ async function renderHeadTeacherDashboard() {
         if (schoolTitleEl) schoolTitleEl.textContent = schoolName;
     }
 
-    // Fetch school staff from Supabase
-    const { data: staffList, error } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('school', schoolName);
-
-    if (error) {
-        console.error('Error loading school staff:', error);
-        return;
-    }
-
-    const totalTeachers = staffList ? staffList.filter(s => s.role === 'teacher').length : 0;
-    const pendingCount = staffList ? staffList.filter(s => s.account_status === 'pending').length : 0;
-
-    // Update KPI metrics on UI
-    document.getElementById('ht-total-teachers').textContent = totalTeachers;
-    document.getElementById('ht-pending-approvals').textContent = pendingCount;
-
-    // Render Staff Table Directory
-    const staffContainer = document.getElementById('ht-staff-list');
-    if (staffList && staffList.length > 0) {
-        staffContainer.innerHTML = `
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider">
-                            <th class="py-3 px-4">Staff Member</th>
-                            <th class="py-3 px-4">Role</th>
-                            <th class="py-3 px-4">Email Address</th>
-                            <th class="py-3 px-4">Status</th>
-                            <th class="py-3 px-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-800/60">
-                        ${staffList.map(staff => `
-                            <tr>
-                                <td class="py-3.5 px-4 font-medium text-white">${staff.name || staff.full_name || 'N/A'}</td>
-                                <td class="py-3.5 px-4 capitalize text-slate-300">${staff.role}</td>
-                                <td class="py-3.5 px-4 text-slate-400">${staff.email}</td>
-                                <td class="py-3.5 px-4">
-                                    <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${staff.account_status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}">
-                                        ${staff.account_status || 'active'}
-                                    </span>
-                                </td>
-                                <td class="py-3.5 px-4 text-right">
-                                    ${staff.account_status === 'pending' ? `
-                                        <button onclick="approveStaff('${staff.id}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition">
-                                            Approve
-                                        </button>
-                                    ` : `
-                                        <span class="text-xs text-slate-500 font-medium">Verified</span>
-                                    `}
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    } else {
-        staffContainer.innerHTML = '<p class="text-slate-400 py-4">No other staff members found registered under this school yet.</p>';
-    }
-}
-
-// Approve Pending Staff Account Functionality
-async function approveStaff(userId) {
-    const { error } = await supabaseClient
-        .from('profiles')
-        .update({ account_status: 'active' })
-        .eq('id', userId);
-
-    if (error) {
-        alert('Failed to approve account: ' + error.message);
-        return;
-    }
-
-    alert('Staff account approved successfully!');
-    renderHeadTeacherDashboard();
-}
-// Function to load profiles (Teachers & Students) into the Head Teacher Dashboard
-async function loadHeadTeacherData() {
-    // 💡 REPLACE `_supabase` with whatever variable name is used to initialize Supabase in your project
-    // e.g., window._supabase, window.supabaseClient, window.client, etc.
-    const db = window._supabase || window.supabase || window.supabaseClient;
-
-    if (!db || typeof db.from !== 'function') {
-        console.error('Supabase client not found. Please check your global variable name.');
-        return;
-    }
-
     try {
-        const { data: profiles, error } = await db
-            .from('profiles')
-            .select('*');
+        // Fetch all profiles from Supabase for this school (or all if school isn't strictly set)
+        let query = supabaseClient.from('profiles').select('*');
+        if (schoolName) {
+            query = query.eq('school', schoolName);
+        }
+
+        const { data: profiles, error } = await query;
 
         if (error) throw error;
 
         if (!profiles || profiles.length === 0) {
             console.log('No profiles found.');
+            const staffContainer = document.getElementById('ht-staff-list');
+            if (staffContainer) {
+                staffContainer.innerHTML = '<p class="text-slate-400 py-4">No staff or student members found registered under this school yet.</p>';
+            }
             return;
         }
 
+        // Separate staff/teachers and students
         const teachers = profiles.filter(p => p.role === 'teacher' || p.role === 'owner');
         const students = profiles.filter(p => p.role === 'student');
+        const pendingCount = profiles.filter(s => s.account_status === 'pending').length;
 
-        // Update Total Teachers card
+        // Update KPI metrics on UI
         const totalTeachersEl = document.getElementById('ht-total-teachers');
-        if (totalTeachersEl) {
-            totalTeachersEl.textContent = teachers.length;
-        }
+        if (totalTeachersEl) totalTeachersEl.textContent = teachers.length;
 
-        // Render Lists inside the Staff Tab container
+        const pendingApprovalsEl = document.getElementById('ht-pending-approvals');
+        if (pendingApprovalsEl) pendingApprovalsEl.textContent = pendingCount;
+
+        // Render Staff & Students Directory inside the container
         const staffContainer = document.getElementById('ht-staff-list');
         if (staffContainer) {
             let html = `
+                <!-- Teachers & Staff Section -->
                 <div class="mb-8">
-                    <h3 class="text-white font-semibold text-lg mb-4">Registered Teachers (${teachers.length})</h3>
+                    <h3 class="text-white font-semibold text-lg mb-4">Registered Teachers & Staff (${teachers.length})</h3>
                     <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50">
                         <table class="w-full text-left border-collapse text-sm">
                             <thead>
-                                <tr class="border-b border-slate-800 text-slate-400 bg-slate-900/80">
-                                    <th class="py-3 px-4 font-semibold">Name</th>
-                                    <th class="py-3 px-4 font-semibold">Email</th>
+                                <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/80">
+                                    <th class="py-3 px-4 font-semibold">Staff Member</th>
                                     <th class="py-3 px-4 font-semibold">Role</th>
-                                    <th class="py-3 px-4 font-semibold text-right">Status</th>
+                                    <th class="py-3 px-4 font-semibold">Email Address</th>
+                                    <th class="py-3 px-4 font-semibold">Status</th>
+                                    <th class="py-3 px-4 font-semibold text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-800/60">
             `;
 
-            teachers.forEach(t => {
+            teachers.forEach(staff => {
+                const isPending = staff.account_status === 'pending';
                 html += `
                     <tr class="hover:bg-slate-800/40 transition">
-                        <td class="py-3 px-4 font-medium text-white">${t.name || 'N/A'}</td>
-                        <td class="py-3 px-4 text-slate-300">${t.email || 'N/A'}</td>
-                        <td class="py-3 px-4"><span class="px-2.5 py-1 text-xs rounded-full bg-indigo-500/10 text-indigo-400 capitalize font-medium">${t.role}</span></td>
-                        <td class="py-3 px-4 text-right">
-                            <span class="text-xs text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-full">Verified</span>
+                        <td class="py-3.5 px-4 font-medium text-white">${staff.name || staff.full_name || 'N/A'}</td>
+                        <td class="py-3.5 px-4 capitalize text-slate-300">${staff.role}</td>
+                        <td class="py-3.5 px-4 text-slate-400">${staff.email || 'N/A'}</td>
+                        <td class="py-3.5 px-4">
+                            <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${!isPending ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}">
+                                ${staff.account_status || 'active'}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-right">
+                            ${isPending ? `
+                                <button onclick="approveStaff('${staff.id}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition">
+                                    Approve
+                                </button>
+                            ` : `
+                                <span class="text-xs text-slate-500 font-medium">Verified</span>
+                            `}
                         </td>
                     </tr>
                 `;
@@ -2141,13 +2075,14 @@ async function loadHeadTeacherData() {
 
             html += `</tbody></table></div></div>`;
 
+            // Students Section
             html += `
                 <div>
                     <h3 class="text-white font-semibold text-lg mb-4">Registered Students (${students.length})</h3>
                     <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50">
                         <table class="w-full text-left border-collapse text-sm">
                             <thead>
-                                <tr class="border-b border-slate-800 text-slate-400 bg-slate-900/80">
+                                <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/80">
                                     <th class="py-3 px-4 font-semibold">Student Name</th>
                                     <th class="py-3 px-4 font-semibold">Email</th>
                                     <th class="py-3 px-4 font-semibold text-right">Status</th>
@@ -2159,7 +2094,7 @@ async function loadHeadTeacherData() {
             students.forEach(s => {
                 html += `
                     <tr class="hover:bg-slate-800/40 transition">
-                        <td class="py-3 px-4 font-medium text-white">${s.name || 'N/A'}</td>
+                        <td class="py-3 px-4 font-medium text-white">${s.name || s.full_name || 'N/A'}</td>
                         <td class="py-3 px-4 text-slate-300">${s.email || 'N/A'}</td>
                         <td class="py-3 px-4 text-right">
                             <span class="px-2.5 py-1 text-xs rounded-full bg-blue-500/10 text-blue-400 font-medium">Active Student</span>
@@ -2178,6 +2113,23 @@ async function loadHeadTeacherData() {
     }
 }
 
+// Approve Pending Staff Account Functionality
+async function approveStaff(userId) {
+    const { error } = await supabaseClient
+        .from('profiles')
+        .update({ account_status: 'active' })
+        .eq('id', userId);
+
+    if (error) {
+        alert('Failed to approve account: ' + error.message);
+        return;
+    }
+
+    alert('Staff account approved successfully!');
+    renderHeadTeacherDashboard();
+}
+
+// Automatically load on page initialization
 document.addEventListener('DOMContentLoaded', () => {
-    loadHeadTeacherData();
+    renderHeadTeacherDashboard();
 });
