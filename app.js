@@ -159,8 +159,16 @@ function setupAuthTabs() {
 
     if (roleSelect && teacherFields) {
         roleSelect.addEventListener('change', (e) => {
-            if (e.target.value === 'teacher') {
+            const role = e.target.value;
+            // Show teacher fields if role is either 'teacher' or 'head-teacher'
+            if (role === 'teacher' || role === 'head-teacher') {
                 teacherFields.classList.remove('hidden');
+                
+                // Optional: Automatically set position dropdown if available
+                const posSelect = document.getElementById('reg-position');
+                if (posSelect) {
+                    posSelect.value = (role === 'head-teacher') ? 'Head Teacher' : 'Teacher';
+                }
             } else {
                 teacherFields.classList.add('hidden');
             }
@@ -198,7 +206,8 @@ function setupEventListeners() {
                 return;
             }
 
-            const rawLogoUrl = role === 'teacher' ? (document.getElementById('reg-school-logo')?.value || '') : '';
+            const isStaff = (role === 'teacher' || role === 'head-teacher');
+            const rawLogoUrl = isStaff ? (document.getElementById('reg-school-logo')?.value || '') : '';
             const finalRole = email.toLowerCase() === MASTER_ADMIN_EMAIL ? 'owner' : role;
 
             // Constructed DB record mapping both naming standards (name/full_name & phone/phone_number)
@@ -210,12 +219,12 @@ function setupEventListeners() {
                 phone: phone,
                 phone_number: phone,
                 password: password,
-                account_status: role === 'teacher' ? 'pending' : 'active',
-                school: role === 'teacher' ? (document.getElementById('reg-school')?.value || '') : '',
-                school_location: role === 'teacher' ? (document.getElementById('reg-school-location')?.value || '') : '',
-                position: role === 'teacher' ? (document.getElementById('reg-position')?.value || '') : '',
+                account_status: isStaff ? 'pending' : 'active',
+                school: isStaff ? (document.getElementById('reg-school')?.value || '') : '',
+                school_location: isStaff ? (document.getElementById('reg-school-location')?.value || '') : '',
+                position: isStaff ? (document.getElementById('reg-position')?.value || '') : '',
                 school_logo_url: typeof getDirectImageUrl === 'function' ? getDirectImageUrl(rawLogoUrl) : rawLogoUrl,
-                payment_ref: role === 'teacher' ? (document.getElementById('reg-payment-ref')?.value || '') : ''
+                payment_ref: isStaff ? (document.getElementById('reg-payment-ref')?.value || '') : ''
             };
 
             const { data: insertedData, error } = await supabaseClient
@@ -236,8 +245,8 @@ function setupEventListeners() {
             localStorage.setItem('user', JSON.stringify(savedProfile));
             window.currentUserProfile = savedProfile;
 
-            if (role === 'teacher') {
-                alert('Teacher account registered! Pending payment approval by System Owner.');
+            if (isStaff) {
+                alert('Staff/Head Teacher account registered! Pending payment approval by System Owner.');
             } else {
                 alert('Account created successfully! You can now log in.');
             }
@@ -268,6 +277,12 @@ function setupEventListeners() {
                 return;
             }
 
+            // Optional check for pending approval status
+            if ((user.role === 'teacher' || user.role === 'head-teacher') && user.account_status === 'pending') {
+                alert('Your account is pending payment verification by the System Owner. Please contact schoolsystems.ange.rw@gmail.com.');
+                return;
+            }
+
             Session.setUser(user);
             checkSession();
         });
@@ -281,7 +296,7 @@ function setupEventListeners() {
             checkSession();
         });
     }
-
+}
     // Class Generator
     const createClassForm = document.getElementById('create-class-form');
     if (createClassForm) {
