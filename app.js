@@ -2001,12 +2001,15 @@ function switchHtTab(tabName) {
 }
 // Data Loader & Renderer for Head Teacher Dashboard (Staff & Students)
 async function renderHeadTeacherDashboard() {
-    // ABSOLUTE FIREWALL: Stop executing immediately if this element is missing from the page
-    const staffContainer = document.getElementById('ht-staff-list');
-    if (!staffContainer) {
-        console.log('Aborted renderHeadTeacherDashboard: Not on Head Teacher page.');
+    // ABSOLUTE SPA FIREWALL: Stop executing immediately if the Head Teacher section is hidden or missing
+    const headTeacherSection = document.getElementById('head-teacher-dashboard');
+    if (!headTeacherSection || headTeacherSection.classList.contains('hidden')) {
+        console.log('Aborted renderHeadTeacherDashboard: Not currently viewing Head Teacher dashboard.');
         return;
     }
+
+    const staffContainer = document.getElementById('ht-staff-list');
+    if (!staffContainer) return;
 
     const currentUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
     console.log('Current Logged-in User:', currentUser);
