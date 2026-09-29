@@ -2075,67 +2075,102 @@ async function approveStaff(userId) {
     alert('Staff account approved successfully!');
     renderHeadTeacherDashboard();
 }
-// Function to load and render the staff directory in the Staff & Approvals tab
-async function loadHeadTeacherStaff() {
-    const staffContainer = document.getElementById('ht-staff-list');
-    if (!staffContainer) return;
-
-    // Set a loading state
-    staffContainer.innerHTML = `<p class="text-slate-400 text-sm">Fetching teacher records...</p>`;
-
+// Function to load profiles (Teachers & Students) into the Head Teacher Dashboard
+async function loadHeadTeacherData() {
     try {
-        // Example fetch orsupabase query to get teachers
-        // Adjust this depending on how your database or local array is structured
-        const { data: teachers, error } = await supabase
-            .from('teachers') // Replace with your actual teachers table name
+        // Fetch all profiles from Supabase
+        const { data: profiles, error } = await supabase
+            .from('profiles')
             .select('*');
 
         if (error) throw error;
 
-        if (!teachers || teachers.length === 0) {
-            staffContainer.innerHTML = `<p class="text-slate-400 text-sm">No registered teachers found.</p>`;
+        if (!profiles || profiles.length === 0) {
+            console.log('No profiles found.');
             return;
         }
 
-        // Build the HTML table or cards for the staff list
-        let html = `
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead>
-                        <tr class="border-b border-slate-800 text-slate-400">
-                            <th class="py-3 px-4 font-semibold">Teacher Name</th>
-                            <th class="py-3 px-4 font-semibold">Email</th>
-                            <th class="py-3 px-4 font-semibold">Status</th>
-                            <th class="py-3 px-4 font-semibold text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-800/60">
-        `;
+        // Filter teachers and students based on the 'role' column seen in your database
+        const teachers = profiles.filter(p => p.role === 'teacher' || p.role === 'owner');
+        const students = profiles.filter(p => p.role === 'student');
 
-        teachers.forEach(teacher => {
-            html += `
-                <tr class="hover:bg-slate-800/40 transition">
-                    <td class="py-3.5 px-4 font-medium text-white">${teacher.name || 'N/A'}</td>
-                    <td class="py-3.5 px-4 text-slate-300">${teacher.email || 'N/A'}</td>
-                    <td class="py-3.5 px-4">
-                        <span class="px-2.5 py-1 text-xs rounded-full font-semibold ${teacher.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}">
-                            ${teacher.status || 'Pending'}
-                        </span>
-                    </td>
-                    <td class="py-3.5 px-4 text-right">
-                        <button onclick="approveTeacher('${teacher.id}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition">
-                            Review / Approve
-                        </button>
-                    </td>
-                </tr>
+        // 1. Update the Total Teachers metric card on the Overview tab
+        const totalTeachersEl = document.getElementById('ht-total-teachers');
+        if (totalTeachersEl) {
+            totalTeachersEl.textContent = teachers.length;
+        }
+
+        // 2. Render Staff & Teachers List
+        const staffContainer = document.getElementById('ht-staff-list');
+        if (staffContainer) {
+            let html = `
+                <div class="mb-6">
+                    <h3 class="text-white font-semibold text-md mb-3">Registered Teachers (${teachers.length})</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-slate-400">
+                                    <th class="py-3 px-4 font-semibold">Name</th>
+                                    <th class="py-3 px-4 font-semibold">Email</th>
+                                    <th class="py-3 px-4 font-semibold">Role</th>
+                                    <th class="py-3 px-4 font-semibold text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60">
             `;
-        });
 
-        html += `</tbody></table></div>`;
-        staffContainer.innerHTML = html;
+            teachers.forEach(t => {
+                html += `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-3 px-4 font-medium text-white">${t.name || 'N/A'}</td>
+                        <td class="py-3 px-4 text-slate-300">${t.email || 'N/A'}</td>
+                        <td class="py-3 px-4"><span class="px-2 py-0.5 text-xs rounded-full bg-indigo-500/10 text-indigo-400 capitalize font-medium">${t.role}</span></td>
+                        <td class="py-3 px-4 text-right">
+                            <span class="text-xs text-emerald-400 font-semibold">Verified</span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table></div></div>`;
+
+            // Render Students List right below or in an academic section
+            html += `
+                <div>
+                    <h3 class="text-white font-semibold text-md mb-3">Registered Students (${students.length})</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-slate-400">
+                                    <th class="py-3 px-4 font-semibold">Student Name</th>
+                                    <th class="py-3 px-4 font-semibold">Email</th>
+                                    <th class="py-3 px-4 font-semibold">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60">
+            `;
+
+            students.forEach(s => {
+                html += `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-3 px-4 font-medium text-white">${s.name || 'N/A'}</td>
+                        <td class="py-3 px-4 text-slate-300">${s.email || 'N/A'}</td>
+                        <td class="py-3 px-4"><span class="px-2 py-0.5 text-xs rounded-full bg-blue-500/10 text-blue-400 font-medium">Active Student</span></td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table></div></div>`;
+
+            staffContainer.innerHTML = html;
+        }
 
     } catch (err) {
-        console.error('Error loading staff:', err);
-        staffContainer.innerHTML = `<p class="text-rose-400 text-sm">Failed to load staff records. Please check your database connection.</p>`;
+        console.error('Error fetching dashboard data from Supabase:', err);
     }
 }
+
+// Automatically load data when the dashboard initializes or refreshes
+document.addEventListener('DOMContentLoaded', () => {
+    loadHeadTeacherData();
+});
