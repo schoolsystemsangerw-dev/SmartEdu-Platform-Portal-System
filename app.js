@@ -26,7 +26,7 @@ function setupEventListeners() {
             }
 
             // Check if profile exists
-            const { data: existingUser } = await supabaseClient
+            const { data: existingUser } = await supabase
                 .from('profiles')
                 .select('email')
                 .eq('email', email)
@@ -58,7 +58,7 @@ function setupEventListeners() {
                 payment_ref: isStaff ? (document.getElementById('reg-payment-ref')?.value || '') : ''
             };
 
-            const { data: insertedData, error } = await supabaseClient
+            const { data: insertedData, error } = await supabase
                 .from('profiles')
                 .insert([newUser])
                 .select();
@@ -93,7 +93,7 @@ function setupEventListeners() {
             const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
 
-            const { data: user, error } = await supabaseClient
+            const { data: user, error } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('email', email)
@@ -135,7 +135,7 @@ function setupEventListeners() {
                 class_code: code
             };
 
-            const { error } = await supabaseClient.from('classes').insert([newClass]);
+            const { error } = await supabase.from('classes').insert([newClass]);
 
             if (error) {
                 alert('Error creating class: ' + error.message);
@@ -160,7 +160,7 @@ function setupEventListeners() {
                 return;
             }
 
-            const { data: classData, error: classError } = await supabaseClient
+            const { data: classData, error: classError } = await supabase
                 .from('classes')
                 .select('*')
                 .eq('class_code', classCode)
@@ -171,7 +171,7 @@ function setupEventListeners() {
                 return;
             }
 
-            const { error: enrollError } = await supabaseClient
+            const { error: enrollError } = await supabase
                 .from('enrollments')
                 .insert([{
                     student_email: currentUser.email,
@@ -193,6 +193,7 @@ function setupEventListeners() {
         });
     }
 }
+
 // ==========================================
 // 3. LIVE CLASSROOM ENGINE (JITSI MEET)
 // ==========================================
@@ -278,7 +279,7 @@ async function renderOwnerDashboard() {
     const container = document.getElementById('owner-pending-list');
     if (!container) return;
 
-    const { data: pendingTeachers, error } = await supabaseClient
+    const { data: pendingTeachers, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('account_status', 'pending');
@@ -314,7 +315,7 @@ async function renderOwnerDashboard() {
 }
 
 window.approveUser = async function(email) {
-    const { error } = await supabaseClient
+    const { error } = await supabase
         .from('profiles')
         .update({ account_status: 'active' })
         .eq('email', email);
@@ -332,7 +333,7 @@ async function renderTeacherDashboard() {
     const container = document.getElementById('teacher-classes-cards');
     if (!container) return;
 
-    const { data: classes, error } = await supabaseClient
+    const { data: classes, error } = await supabase
         .from('classes')
         .select('*')
         .eq('teacher_email', currentUser?.email);
@@ -342,7 +343,7 @@ async function renderTeacherDashboard() {
         return;
     }
 
-    const { data: exams } = await supabaseClient
+    const { data: exams } = await supabase
         .from('exams')
         .select('*')
         .eq('teacher_email', currentUser?.email);
@@ -406,7 +407,7 @@ async function renderStudentDashboard() {
     const container = document.getElementById('student-classes-cards');
     if (!container) return;
 
-    const { data: enrollments, error: enrollError } = await supabaseClient
+    const { data: enrollments, error: enrollError } = await supabase
         .from('enrollments')
         .select('class_code')
         .eq('student_email', currentUser?.email);
@@ -418,25 +419,25 @@ async function renderStudentDashboard() {
 
     const classCodes = enrollments.map(e => e.class_code);
 
-    const { data: classes, error: classError } = await supabaseClient
+    const { data: classes, error: classError } = await supabase
         .from('classes')
         .select('*')
         .in('class_code', classCodes);
 
     if (classError || !classes || classes.length === 0) return;
 
-    const { data: exams } = await supabaseClient
+    const { data: exams } = await supabase
         .from('exams')
         .select('*')
         .in('class_code', classCodes);
 
-    const { data: submissions } = await supabaseClient
+    const { data: submissions } = await supabase
         .from('submissions')
         .select('*')
         .eq('student_email', currentUser?.email);
 
     const teacherEmails = [...new Set(classes.map(c => c.teacher_email))];
-    const { data: teacherProfiles } = await supabaseClient
+    const { data: teacherProfiles } = await supabase
         .from('profiles')
         .select('*')
         .in('email', teacherEmails);
@@ -564,7 +565,7 @@ window.saveExam = async function(classCode) {
         return;
     }
 
-    const { error } = await supabaseClient
+    const { error } = await supabase
         .from('exams')
         .insert([{
             class_code: classCode,
@@ -590,7 +591,7 @@ window.closeExamModal = function() {
 };
 
 window.openStudentExam = async function(examId) {
-    const { data: exam, error } = await supabaseClient
+    const { data: exam, error } = await supabase
         .from('exams')
         .select('*')
         .eq('id', examId)
@@ -656,7 +657,7 @@ window.submitStudentExam = async function(examId) {
     const form = document.getElementById('student-exam-form');
     if (!form) return;
 
-    const { data: exam } = await supabaseClient.from('exams').select('*').eq('id', examId).single();
+    const { data: exam } = await supabase.from('exams').select('*').eq('id', examId).single();
     if (!exam) return;
 
     const lines = exam.questions.split('\n').filter(l => l.trim() !== '');
@@ -694,7 +695,7 @@ window.submitStudentExam = async function(examId) {
     const scoreObtained = Math.round(correctCount * pointsPerQuestion);
     const percentage = Math.round((scoreObtained / exam.total_marks) * 100);
 
-    await supabaseClient.from('submissions').insert([{
+    await supabase.from('submissions').insert([{
         exam_id: examId,
         student_email: currentUser?.email,
         student_name: currentUser?.name || currentUser?.full_name || 'Student',
@@ -727,8 +728,8 @@ window.renderMarkingGuideInModal = function(exam, studentAnswers, scoreObtained,
 };
 
 window.viewStudentMarkingGuide = async function(examId) {
-    const { data: exam } = await supabaseClient.from('exams').select('*').eq('id', examId).single();
-    const { data: sub } = await supabaseClient.from('submissions').select('*').eq('exam_id', examId).eq('student_email', currentUser?.email).single();
+    const { data: exam } = await supabase.from('exams').select('*').eq('id', examId).single();
+    const { data: sub } = await supabase.from('submissions').select('*').eq('exam_id', examId).eq('student_email', currentUser?.email).single();
 
     if (!exam || !sub) return;
 
@@ -745,8 +746,8 @@ window.viewExamResults = async function(examId) {
 
     if (!modal) return;
 
-    const { data: exam } = await supabaseClient.from('exams').select('*').eq('id', examId).single();
-    const { data: submissions } = await supabaseClient.from('submissions').select('*').eq('exam_id', examId);
+    const { data: exam } = await supabase.from('exams').select('*').eq('id', examId).single();
+    const { data: submissions } = await supabase.from('submissions').select('*').eq('exam_id', examId);
 
     title.innerText = `Exam Results: ${exam?.title || 'Exam'}`;
     body.innerHTML = `
@@ -799,7 +800,7 @@ window.loadMyTickets = async function() {
     const container = document.getElementById('my-tickets-container');
     if (!container || !currentUser?.email) return;
 
-    const { data: tickets } = await supabaseClient.from('help_tickets').select('*').ilike('user_email', currentUser.email);
+    const { data: tickets } = await supabase.from('help_tickets').select('*').ilike('user_email', currentUser.email);
     container.innerHTML = (tickets || []).map(t => `
         <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs">
             <p class="text-white font-bold">${t.category}</p>
@@ -813,7 +814,7 @@ window.loadHelpTickets = async function() {
     const tbody = document.getElementById('help-tickets-tbody');
     if (!tbody) return;
 
-    const { data: tickets } = await supabaseClient.from('help_tickets').select('*').order('created_at', { ascending: false });
+    const { data: tickets } = await supabase.from('help_tickets').select('*').order('created_at', { ascending: false });
     tbody.innerHTML = (tickets || []).map(t => `
         <tr>
             <td class="py-2 text-white">${t.user_name || t.user_email}</td>
@@ -828,7 +829,7 @@ window.replyToTicket = async function(ticketId) {
     const response = prompt("Enter reply message:");
     if (!response) return;
 
-    await supabaseClient.from('help_tickets').update({ admin_response: response, status: 'Resolved' }).eq('id', ticketId);
+    await supabase.from('help_tickets').update({ admin_response: response, status: 'Resolved' }).eq('id', ticketId);
     window.loadHelpTickets();
 };
 
@@ -850,6 +851,7 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
 }
 
 window.generateReportCard = generateReportCard;
+
 // ==========================================
 // 7. USER DIRECTORY RENDERER (SUPER ADMIN)
 // ==========================================
@@ -860,7 +862,6 @@ window.loadUserDirectory = async function() {
     try {
         tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-indigo-400 font-mono">Loading user directory...</td></tr>`;
 
-        // Directly use the global supabase object
         const { data: profiles, error } = await supabase
             .from('profiles')
             .select('*')
