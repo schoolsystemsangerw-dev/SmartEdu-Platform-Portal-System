@@ -2077,20 +2077,28 @@ async function approveStaff(userId) {
 }
 // Function to load profiles (Teachers & Students) into the Head Teacher Dashboard
 async function loadHeadTeacherData() {
+    // Safely retrieve the initialized Supabase client instance
+    const db = window.supabase || window.supabaseClient || window._supabase || (typeof supabase !== 'undefined' ? supabase : null);
+
+    if (!db || typeof db.from !== 'function') {
+        console.error('Supabase client is not initialized or db.from is unavailable.');
+        return;
+    }
+
     try {
         // Fetch all profiles from Supabase
-        const { data: profiles, error } = await supabase
+        const { data: profiles, error } = await db
             .from('profiles')
             .select('*');
 
         if (error) throw error;
 
         if (!profiles || profiles.length === 0) {
-            console.log('No profiles found.');
+            console.log('No profiles found in the database.');
             return;
         }
 
-        // Filter teachers and students based on the 'role' column seen in your database
+        // Filter teachers and students based on the 'role' column
         const teachers = profiles.filter(p => p.role === 'teacher' || p.role === 'owner');
         const students = profiles.filter(p => p.role === 'student');
 
@@ -2100,20 +2108,22 @@ async function loadHeadTeacherData() {
             totalTeachersEl.textContent = teachers.length;
         }
 
-        // 2. Render Staff & Teachers List
+        // 2. Render Staff & Teachers List into the Staff container
         const staffContainer = document.getElementById('ht-staff-list');
         if (staffContainer) {
             let html = `
-                <div class="mb-6">
-                    <h3 class="text-white font-semibold text-md mb-3">Registered Teachers (${teachers.length})</h3>
-                    <div class="overflow-x-auto">
+                <div class="mb-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-white font-semibold text-lg">Registered Teachers (${teachers.length})</h3>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50">
                         <table class="w-full text-left border-collapse text-sm">
                             <thead>
-                                <tr class="border-b border-slate-800 text-slate-400">
+                                <tr class="border-b border-slate-800 text-slate-400 bg-slate-900/80">
                                     <th class="py-3 px-4 font-semibold">Name</th>
                                     <th class="py-3 px-4 font-semibold">Email</th>
                                     <th class="py-3 px-4 font-semibold">Role</th>
-                                    <th class="py-3 px-4 font-semibold text-right">Actions</th>
+                                    <th class="py-3 px-4 font-semibold text-right">Status</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-800/60">
@@ -2124,9 +2134,9 @@ async function loadHeadTeacherData() {
                     <tr class="hover:bg-slate-800/40 transition">
                         <td class="py-3 px-4 font-medium text-white">${t.name || 'N/A'}</td>
                         <td class="py-3 px-4 text-slate-300">${t.email || 'N/A'}</td>
-                        <td class="py-3 px-4"><span class="px-2 py-0.5 text-xs rounded-full bg-indigo-500/10 text-indigo-400 capitalize font-medium">${t.role}</span></td>
+                        <td class="py-3 px-4"><span class="px-2.5 py-1 text-xs rounded-full bg-indigo-500/10 text-indigo-400 capitalize font-medium">${t.role}</span></td>
                         <td class="py-3 px-4 text-right">
-                            <span class="text-xs text-emerald-400 font-semibold">Verified</span>
+                            <span class="text-xs text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-full">Verified</span>
                         </td>
                     </tr>
                 `;
@@ -2134,17 +2144,19 @@ async function loadHeadTeacherData() {
 
             html += `</tbody></table></div></div>`;
 
-            // Render Students List right below or in an academic section
+            // Render Students List below teachers
             html += `
                 <div>
-                    <h3 class="text-white font-semibold text-md mb-3">Registered Students (${students.length})</h3>
-                    <div class="overflow-x-auto">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-white font-semibold text-lg">Registered Students (${students.length})</h3>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50">
                         <table class="w-full text-left border-collapse text-sm">
                             <thead>
-                                <tr class="border-b border-slate-800 text-slate-400">
+                                <tr class="border-b border-slate-800 text-slate-400 bg-slate-900/80">
                                     <th class="py-3 px-4 font-semibold">Student Name</th>
                                     <th class="py-3 px-4 font-semibold">Email</th>
-                                    <th class="py-3 px-4 font-semibold">Status</th>
+                                    <th class="py-3 px-4 font-semibold text-right">Status</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-800/60">
@@ -2155,7 +2167,9 @@ async function loadHeadTeacherData() {
                     <tr class="hover:bg-slate-800/40 transition">
                         <td class="py-3 px-4 font-medium text-white">${s.name || 'N/A'}</td>
                         <td class="py-3 px-4 text-slate-300">${s.email || 'N/A'}</td>
-                        <td class="py-3 px-4"><span class="px-2 py-0.5 text-xs rounded-full bg-blue-500/10 text-blue-400 font-medium">Active Student</span></td>
+                        <td class="py-3 px-4 text-right">
+                            <span class="px-2.5 py-1 text-xs rounded-full bg-blue-500/10 text-blue-400 font-medium">Active Student</span>
+                        </td>
                     </tr>
                 `;
             });
@@ -2170,7 +2184,7 @@ async function loadHeadTeacherData() {
     }
 }
 
-// Automatically load data when the dashboard initializes or refreshes
+// Automatically load data on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadHeadTeacherData();
 });
