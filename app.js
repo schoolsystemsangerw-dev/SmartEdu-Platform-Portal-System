@@ -1960,3 +1960,118 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
 window.loadStudentsForReport = loadStudentsForReport;
 window.handleGenerateReport = handleGenerateReport;
 window.generateReportCard = generateReportCard;
+// Tab Switching Handler
+function switchHtTab(tabName) {
+    const tabs = ['overview', 'staff', 'academics', 'reports'];
+    
+    tabs.forEach(t => {
+        const content = document.getElementById(`ht-tab-content-${t}`);
+        const btn = document.getElementById(`btn-ht-${t}`);
+        
+        if (content) {
+            if (t === tabName) {
+                content.classList.remove('hidden');
+            } else {
+                content.classList.add('hidden');
+            }
+        }
+        
+        if (btn) {
+            if (t === tabName) {
+                btn.className = 'w-full text-left px-4 py-3 rounded-xl bg-indigo-600 text-white font-medium shadow-lg shadow-indigo-600/20 transition flex items-center space-x-3 text-sm';
+            } else {
+                btn.className = 'w-full text-left px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800/60 hover:text-white font-medium transition flex items-center space-x-3 text-sm';
+            }
+        }
+    });
+}
+
+// Data Loader & Renderer for Head Teacher Dashboard
+async function renderHeadTeacherDashboard() {
+    const currentUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const schoolName = currentUser.school || '';
+
+    if (schoolName) {
+        const schoolTitleEl = document.getElementById('ht-school-title');
+        if (schoolTitleEl) schoolTitleEl.textContent = schoolName;
+    }
+
+    // Fetch school staff from Supabase
+    const { data: staffList, error } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('school', schoolName);
+
+    if (error) {
+        console.error('Error loading school staff:', error);
+        return;
+    }
+
+    const totalTeachers = staffList ? staffList.filter(s => s.role === 'teacher').length : 0;
+    const pendingCount = staffList ? staffList.filter(s => s.account_status === 'pending').length : 0;
+
+    // Update KPI metrics on UI
+    document.getElementById('ht-total-teachers').textContent = totalTeachers;
+    document.getElementById('ht-pending-approvals').textContent = pendingCount;
+
+    // Render Staff Table Directory
+    const staffContainer = document.getElementById('ht-staff-list');
+    if (staffList && staffList.length > 0) {
+        staffContainer.innerHTML = `
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider">
+                            <th class="py-3 px-4">Staff Member</th>
+                            <th class="py-3 px-4">Role</th>
+                            <th class="py-3 px-4">Email Address</th>
+                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/60">
+                        ${staffList.map(staff => `
+                            <tr>
+                                <td class="py-3.5 px-4 font-medium text-white">${staff.name || staff.full_name || 'N/A'}</td>
+                                <td class="py-3.5 px-4 capitalize text-slate-300">${staff.role}</td>
+                                <td class="py-3.5 px-4 text-slate-400">${staff.email}</td>
+                                <td class="py-3.5 px-4">
+                                    <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${staff.account_status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}">
+                                        ${staff.account_status || 'active'}
+                                    </span>
+                                </td>
+                                <td class="py-3.5 px-4 text-right">
+                                    ${staff.account_status === 'pending' ? `
+                                        <button onclick="approveStaff('${staff.id}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition">
+                                            Approve
+                                        </button>
+                                    ` : `
+                                        <span class="text-xs text-slate-500 font-medium">Verified</span>
+                                    `}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        staffContainer.innerHTML = '<p class="text-slate-400 py-4">No other staff members found registered under this school yet.</p>';
+    }
+}
+
+// Approve Pending Staff Account Functionality
+async function approveStaff(userId) {
+    const { error } = await supabaseClient
+        .from('profiles')
+        .update({ account_status: 'active' })
+        .eq('id', userId);
+
+    if (error) {
+        alert('Failed to approve account: ' + error.message);
+        return;
+    }
+
+    alert('Staff account approved successfully!');
+    renderHeadTeacherDashboard();
+}
