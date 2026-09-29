@@ -2152,22 +2152,41 @@ async function approveStaff(userId) {
     alert('Staff account approved successfully!');
     renderHeadTeacherDashboard();
 }
-// ==========================================
 // Single Master Dashboard Dispatcher
 // ==========================================
 if (window.hasInitializedDashboard !== true) {
     window.hasInitializedDashboard = true;
 
     document.addEventListener('DOMContentLoaded', () => {
-        const activeUser = Session.getUser();
+        const activeUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
         console.log('Master Dispatcher Triggered. Active User:', activeUser);
 
-        if (document.getElementById('ht-staff-list')) {
-            renderHeadTeacherDashboard();
-        } else if (document.getElementById('teacher-classes-cards')) {
-            renderTeacherDashboard();
-        } else if (document.getElementById('student-classes-cards')) {
-            renderStudentDashboard();
+        const actualRole = activeUser.role;
+
+        if (actualRole === 'head-teacher') {
+            const headTeacherDb = document.getElementById('head-teacher-dashboard');
+            if (headTeacherDb) headTeacherDb.classList.remove('hidden');
+            if (typeof renderHeadTeacherDashboard === 'function') {
+                renderHeadTeacherDashboard();
+            }
+        } else if (actualRole === 'teacher') {
+            const teacherDb = document.getElementById('teacher-dashboard');
+            if (teacherDb) teacherDb.classList.remove('hidden');
+            if (typeof renderTeacherDashboard === 'function') {
+                renderTeacherDashboard();
+            }
+        } else if (actualRole === 'student') {
+            const studentDb = document.getElementById('student-dashboard');
+            if (studentDb) studentDb.classList.remove('hidden');
+            if (typeof renderStudentDashboard === 'function') {
+                renderStudentDashboard();
+            }
+        } else if (actualRole === 'owner') {
+            const ownerDb = document.getElementById('owner-dashboard');
+            if (ownerDb) ownerDb.classList.remove('hidden');
+            if (typeof renderOwnerDashboard === 'function') {
+                renderOwnerDashboard();
+            }
         }
     });
 }
