@@ -2075,3 +2075,67 @@ async function approveStaff(userId) {
     alert('Staff account approved successfully!');
     renderHeadTeacherDashboard();
 }
+// Function to load and render the staff directory in the Staff & Approvals tab
+async function loadHeadTeacherStaff() {
+    const staffContainer = document.getElementById('ht-staff-list');
+    if (!staffContainer) return;
+
+    // Set a loading state
+    staffContainer.innerHTML = `<p class="text-slate-400 text-sm">Fetching teacher records...</p>`;
+
+    try {
+        // Example fetch orsupabase query to get teachers
+        // Adjust this depending on how your database or local array is structured
+        const { data: teachers, error } = await supabase
+            .from('teachers') // Replace with your actual teachers table name
+            .select('*');
+
+        if (error) throw error;
+
+        if (!teachers || teachers.length === 0) {
+            staffContainer.innerHTML = `<p class="text-slate-400 text-sm">No registered teachers found.</p>`;
+            return;
+        }
+
+        // Build the HTML table or cards for the staff list
+        let html = `
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-slate-400">
+                            <th class="py-3 px-4 font-semibold">Teacher Name</th>
+                            <th class="py-3 px-4 font-semibold">Email</th>
+                            <th class="py-3 px-4 font-semibold">Status</th>
+                            <th class="py-3 px-4 font-semibold text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/60">
+        `;
+
+        teachers.forEach(teacher => {
+            html += `
+                <tr class="hover:bg-slate-800/40 transition">
+                    <td class="py-3.5 px-4 font-medium text-white">${teacher.name || 'N/A'}</td>
+                    <td class="py-3.5 px-4 text-slate-300">${teacher.email || 'N/A'}</td>
+                    <td class="py-3.5 px-4">
+                        <span class="px-2.5 py-1 text-xs rounded-full font-semibold ${teacher.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}">
+                            ${teacher.status || 'Pending'}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-right">
+                        <button onclick="approveTeacher('${teacher.id}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition">
+                            Review / Approve
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += `</tbody></table></div>`;
+        staffContainer.innerHTML = html;
+
+    } catch (err) {
+        console.error('Error loading staff:', err);
+        staffContainer.innerHTML = `<p class="text-rose-400 text-sm">Failed to load staff records. Please check your database connection.</p>`;
+    }
+}
