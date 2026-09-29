@@ -160,11 +160,8 @@ function setupAuthTabs() {
     if (roleSelect && teacherFields) {
         roleSelect.addEventListener('change', (e) => {
             const role = e.target.value;
-            // Show teacher fields if role is either 'teacher' or 'head-teacher'
             if (role === 'teacher' || role === 'head-teacher') {
                 teacherFields.classList.remove('hidden');
-                
-                // Optional: Automatically set position dropdown if available
                 const posSelect = document.getElementById('reg-position');
                 if (posSelect) {
                     posSelect.value = (role === 'head-teacher') ? 'Head Teacher' : 'Teacher';
@@ -194,7 +191,6 @@ function setupEventListeners() {
                 return;
             }
 
-            // Check if profile exists
             const { data: existingUser } = await supabaseClient
                 .from('profiles')
                 .select('email')
@@ -210,7 +206,6 @@ function setupEventListeners() {
             const rawLogoUrl = isStaff ? (document.getElementById('reg-school-logo')?.value || '') : '';
             const finalRole = email.toLowerCase() === MASTER_ADMIN_EMAIL ? 'owner' : role;
 
-            // Constructed DB record mapping both naming standards (name/full_name & phone/phone_number)
             const newUser = {
                 role: finalRole,
                 name: name,
@@ -237,10 +232,8 @@ function setupEventListeners() {
                 return;
             }
 
-            // Extract inserted user profile or build fallback state
             const savedProfile = (insertedData && insertedData[0]) ? insertedData[0] : newUser;
 
-            // Sync user details to session & local storage immediately
             localStorage.setItem('currentUser', JSON.stringify(savedProfile));
             localStorage.setItem('user', JSON.stringify(savedProfile));
             window.currentUserProfile = savedProfile;
@@ -251,7 +244,6 @@ function setupEventListeners() {
                 alert('Account created successfully! You can now log in.');
             }
 
-            // Reset form inputs & switch to login tab
             registerForm.reset();
             document.getElementById('tab-login')?.click();
         });
@@ -277,7 +269,6 @@ function setupEventListeners() {
                 return;
             }
 
-            // Optional check for pending approval status
             if ((user.role === 'teacher' || user.role === 'head-teacher') && user.account_status === 'pending') {
                 alert('Your account is pending payment verification by the System Owner. Please contact schoolsystems.ange.rw@gmail.com.');
                 return;
