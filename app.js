@@ -1987,6 +1987,10 @@ function switchHtTab(tabName) {
 }
 // Data Loader & Renderer for Head Teacher Dashboard (Staff & Students)
 async function renderHeadTeacherDashboard() {
+    // Only run if we are actually on the Head Teacher dashboard page
+    const staffContainer = document.getElementById('ht-staff-list');
+    if (!staffContainer) return;
+
     const currentUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
     console.log('Current Logged-in User:', currentUser);
 
@@ -2009,15 +2013,10 @@ async function renderHeadTeacherDashboard() {
 
         if (!profiles || profiles.length === 0) {
             console.log('No profiles found.');
-            const staffContainer = document.getElementById('ht-staff-list');
-            if (staffContainer) {
-                staffContainer.innerHTML = '<p class="text-slate-400 py-4">No profiles found in the database table.</p>';
-            }
+            staffContainer.innerHTML = '<p class="text-slate-400 py-4">No profiles found in the database table.</p>';
             return;
         }
 
-        // Filter by school only if the profile row has a school property matching the user's school,
-        // otherwise display all profiles if school fields are blank in the DB.
         const filteredProfiles = schoolName 
             ? profiles.filter(p => !p.school || p.school.trim().toLowerCase() === schoolName.trim().toLowerCase())
             : profiles;
@@ -2034,85 +2033,82 @@ async function renderHeadTeacherDashboard() {
         if (pendingApprovalsEl) pendingApprovalsEl.textContent = pendingCount;
 
         // Render Staff & Students Directory inside the container
-        const staffContainer = document.getElementById('ht-staff-list');
-        if (staffContainer) {
-            let html = `
-                <!-- Teachers & Staff Section -->
-                <div class="mb-8">
-                    <h3 class="text-white font-semibold text-lg mb-4">Registered Teachers & Staff (${teachers.length})</h3>
-                    <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50">
-                        <table class="w-full text-left border-collapse text-sm">
-                            <thead>
-                                <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/80">
-                                    <th class="py-3 px-4 font-semibold">Staff Member</th>
-                                    <th class="py-3 px-4 font-semibold">Role</th>
-                                    <th class="py-3 px-4 font-semibold">Email Address</th>
-                                    <th class="py-3 px-4 font-semibold">Status</th>
-                                    <th class="py-3 px-4 font-semibold text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-800/60">
-            `;
+        let html = `
+            <!-- Teachers & Staff Section -->
+            <div class="mb-8">
+                <h3 class="text-white font-semibold text-lg mb-4">Registered Teachers & Staff (${teachers.length})</h3>
+                <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/80">
+                                <th class="py-3 px-4 font-semibold">Staff Member</th>
+                                <th class="py-3 px-4 font-semibold">Role</th>
+                                <th class="py-3 px-4 font-semibold">Email Address</th>
+                                <th class="py-3 px-4 font-semibold">Status</th>
+                                <th class="py-3 px-4 font-semibold text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60">
+        `;
 
-            teachers.forEach(staff => {
-                const isPending = staff.account_status === 'pending';
-                html += `
-                    <tr class="hover:bg-slate-800/40 transition">
-                        <td class="py-3.5 px-4 font-medium text-white">${staff.name || staff.full_name || 'N/A'}</td>
-                        <td class="py-3.5 px-4 capitalize text-slate-300">${staff.role}</td>
-                        <td class="py-3.5 px-4 text-slate-400">${staff.email || 'N/A'}</td>
-                        <td class="py-3.5 px-4">
-                            <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${!isPending ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}">
-                                ${staff.account_status || 'active'}
-                            </span>
-                        </td>
-                        <td class="py-3.5 px-4 text-right">
-                            ${isPending ? `
-                                <button onclick="approveStaff('${staff.id}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition">
-                                    Approve
-                                </button>
-                            ` : `
-                                <span class="text-xs text-slate-500 font-medium">Verified</span>
-                            `}
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += `</tbody></table></div></div>`;
-
-            // Students Section
+        teachers.forEach(staff => {
+            const isPending = staff.account_status === 'pending';
             html += `
-                <div>
-                    <h3 class="text-white font-semibold text-lg mb-4">Registered Students (${students.length})</h3>
-                    <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50">
-                        <table class="w-full text-left border-collapse text-sm">
-                            <thead>
-                                <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/80">
-                                    <th class="py-3 px-4 font-semibold">Student Name</th>
-                                    <th class="py-3 px-4 font-semibold">Email</th>
-                                    <th class="py-3 px-4 font-semibold text-right">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-800/60">
+                <tr class="hover:bg-slate-800/40 transition">
+                    <td class="py-3.5 px-4 font-medium text-white">${staff.name || staff.full_name || 'N/A'}</td>
+                    <td class="py-3.5 px-4 capitalize text-slate-300">${staff.role}</td>
+                    <td class="py-3.5 px-4 text-slate-400">${staff.email || 'N/A'}</td>
+                    <td class="py-3.5 px-4">
+                        <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${!isPending ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}">
+                            ${staff.account_status || 'active'}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-right">
+                        ${isPending ? `
+                            <button onclick="approveStaff('${staff.id}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition">
+                                Approve
+                            </button>
+                        ` : `
+                            <span class="text-xs text-slate-500 font-medium">Verified</span>
+                        `}
+                    </td>
+                </tr>
             `;
+        });
 
-            students.forEach(s => {
-                html += `
-                    <tr class="hover:bg-slate-800/40 transition">
-                        <td class="py-3 px-4 font-medium text-white">${s.name || s.full_name || 'N/A'}</td>
-                        <td class="py-3 px-4 text-slate-300">${s.email || 'N/A'}</td>
-                        <td class="py-3 px-4 text-right">
-                            <span class="px-2.5 py-1 text-xs rounded-full bg-blue-500/10 text-blue-400 font-medium">Active Student</span>
-                        </td>
-                    </tr>
-                `;
-            });
+        html += `</tbody></table></div></div>`;
 
-            html += `</tbody></table></div></div>`;
+        // Students Section
+        html += `
+            <div>
+                <h3 class="text-white font-semibold text-lg mb-4">Registered Students (${students.length})</h3>
+                <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/80">
+                                <th class="py-3 px-4 font-semibold">Student Name</th>
+                                <th class="py-3 px-4 font-semibold">Email</th>
+                                <th class="py-3 px-4 font-semibold text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60">
+        `;
 
-            staffContainer.innerHTML = html;
-        }
+        students.forEach(s => {
+            html += `
+                <tr class="hover:bg-slate-800/40 transition">
+                    <td class="py-3 px-4 font-medium text-white">${s.name || s.full_name || 'N/A'}</td>
+                    <td class="py-3 px-4 text-slate-300">${s.email || 'N/A'}</td>
+                    <td class="py-3 px-4 text-right">
+                        <span class="px-2.5 py-1 text-xs rounded-full bg-blue-500/10 text-blue-400 font-medium">Active Student</span>
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += `</tbody></table></div></div>`;
+
+        staffContainer.innerHTML = html;
 
     } catch (err) {
         console.error('Error fetching dashboard data from Supabase:', err);
