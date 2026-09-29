@@ -100,10 +100,9 @@ async function checkSession() {
         showAuthSection();
     }
 }
-
 // Navigation Controls
 function hideAllSections() {
-    ['auth-section', 'owner-dashboard', 'teacher-dashboard', 'student-dashboard'].forEach(id => {
+    ['auth-section', 'owner-dashboard', 'head-teacher-dashboard', 'teacher-dashboard', 'student-dashboard'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
     });
@@ -114,6 +113,7 @@ function showAuthSection() {
     const authSec = document.getElementById('auth-section');
     if (authSec) authSec.classList.remove('hidden');
 }
+
 function showRoleDashboard(role) {
     hideAllSections();
     if (role === 'owner') {
