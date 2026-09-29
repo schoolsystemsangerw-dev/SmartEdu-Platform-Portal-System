@@ -2138,10 +2138,8 @@ async function approveStaff(userId) {
     alert('Staff account approved successfully!');
     renderHeadTeacherDashboard();
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    renderHeadTeacherDashboard();
 });
+// ==========================================
 // ==========================================
 // Single Master Dashboard Dispatcher
 // ==========================================
