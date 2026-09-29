@@ -476,18 +476,20 @@ async function renderOwnerDashboard() {
     const container = document.getElementById('owner-pending-list');
     if (!container) return;
 
-    const { data: pendingTeachers, error } = await supabaseClient
+    const { data: pendingStaff, error } = await supabaseClient
         .from('profiles')
         .select('*')
         .eq('account_status', 'pending');
 
-    if (error || !pendingTeachers || pendingTeachers.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-500 italic py-4 text-center">No pending teacher payment approvals.</p>`;
+    if (error || !pendingStaff || pendingStaff.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 italic py-4 text-center">No pending teacher or head teacher payment approvals.</p>`;
         return;
     }
 
-    container.innerHTML = pendingTeachers.map(p => {
+    container.innerHTML = pendingStaff.map(p => {
         const logoUrl = getDirectImageUrl(p.school_logo_url);
+        const roleLabel = p.role === 'head-teacher' ? 'Head Teacher' : (p.position || 'Teacher');
+        
         return `
             <div class="bg-slate-900/80 p-4 rounded-2xl border border-slate-700/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div class="flex items-start gap-3">
@@ -500,7 +502,7 @@ async function renderOwnerDashboard() {
                         </div>
                     ` : ''}
                     <div class="space-y-1">
-                        <h4 class="font-bold text-sm text-white">${p.name} <span class="text-xs font-normal text-indigo-400">(${p.position || 'Teacher'})</span></h4>
+                        <h4 class="font-bold text-sm text-white">${p.name} <span class="text-xs font-normal text-indigo-400">(${roleLabel})</span></h4>
                         <p class="text-xs text-indigo-300 font-semibold">${p.school || 'Unspecified School'} ${p.school_location ? `• ${p.school_location}` : ''}</p>
                         <p class="text-xs text-slate-400">Phone: <span class="text-slate-200 font-mono">${p.phone || 'N/A'}</span> | Email: ${p.email}</p>
                         <p class="text-xs font-bold text-amber-400">MoMo Ref ID: ${p.payment_ref || 'N/A'}</p>
@@ -514,7 +516,7 @@ async function renderOwnerDashboard() {
     }).join('');
 }
 
-// Approve Teacher Account Payment
+// Approve Staff/Head Teacher Account Payment
 window.approveUser = async function(email) {
     const { error } = await supabaseClient
         .from('profiles')
@@ -527,7 +529,7 @@ window.approveUser = async function(email) {
     }
 
     renderOwnerDashboard();
-    alert(`Account approved successfully!`);
+    alert(`Account approved successfully! The user can now access their portal.`);
 };
 
 // Teacher Dashboard (with Exam Creation, Results Tracking & Report Card Generation)
