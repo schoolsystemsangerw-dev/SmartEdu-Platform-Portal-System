@@ -2134,3 +2134,12 @@ async function approveStaff(userId) {
 document.addEventListener('DOMContentLoaded', () => {
     renderHeadTeacherDashboard();
 });
+// Automatically initialize the correct dashboard view when the page finishes loading
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('teacher-classes-cards')) {
+        renderTeacherDashboard();
+    }
+    if (document.getElementById('student-classes-cards')) {
+        renderStudentDashboard();
+    }
+});
