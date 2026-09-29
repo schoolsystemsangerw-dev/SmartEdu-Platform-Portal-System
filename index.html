@@ -322,7 +322,152 @@
                         </button>
                     </form>
                 </div>
+<!-- Head Teacher Dashboard View -->
+<div id="head-teacher-dashboard" class="hidden min-h-screen text-slate-100 bg-slate-950 font-sans">
+    <div class="flex flex-col md:flex-row min-h-[calc(100vh-4rem)]">
+        
+        <!-- Left Sidebar: Professional Administrative Menu -->
+        <div class="w-full md:w-72 bg-slate-900/90 border-r border-slate-800/80 p-6 flex flex-col justify-between shrink-0">
+            <div class="space-y-6">
+                
+                <!-- School Logo & Name Badge -->
+                <div class="bg-slate-800/50 border border-slate-700/60 rounded-xl p-4 flex items-center space-x-3">
+                    <img src="ace.png.jpeg" alt="Ace Academy Logo" class="w-12 h-12 rounded-full object-cover border border-indigo-500/30 shrink-0">
+                    <div class="min-w-0">
+                        <span class="text-[10px] uppercase tracking-wider text-indigo-400 font-bold block">Administration</span>
+                        <h3 id="ht-school-title" class="text-sm font-semibold text-white truncate">Ace Academy</h3>
+                    </div>
+                </div>
 
+                <!-- Navigation Links Stacked Down -->
+                <nav class="space-y-1.5">
+                    <button onclick="switchHtTab('overview')" id="btn-ht-overview" class="w-full text-left px-4 py-3 rounded-xl bg-indigo-600 text-white font-medium shadow-lg shadow-indigo-600/20 transition flex items-center space-x-3 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                        <span>Executive Overview</span>
+                    </button>
+
+                    <button onclick="switchHtTab('staff')" id="btn-ht-staff" class="w-full text-left px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800/60 hover:text-white font-medium transition flex items-center space-x-3 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        <span>Staff & Approvals</span>
+                    </button>
+
+                    <button onclick="switchHtTab('academics')" id="btn-ht-academics" class="w-full text-left px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800/60 hover:text-white font-medium transition flex items-center space-x-3 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                        <span>Academic Performance</span>
+                    </button>
+
+                    <button onclick="switchHtTab('reports')" id="btn-ht-reports" class="w-full text-left px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800/60 hover:text-white font-medium transition flex items-center space-x-3 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span>Official Reports</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- System Info Footer -->
+            <div class="pt-6 border-t border-slate-800 text-xs text-slate-500">
+                <p>SmartEdu OS v3.4</p>
+                <p class="text-slate-400 mt-0.5">Secure Institutional Node</p>
+            </div>
+        </div>
+
+        <!-- Right Main Content Canvas -->
+        <div class="flex-1 p-8 overflow-y-auto bg-slate-950">
+            
+            <!-- Tab 1: Overview Content -->
+            <div id="ht-tab-content-overview" class="space-y-6">
+                <div class="bg-gradient-to-r from-slate-900 to-slate-900/80 border border-slate-800/80 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold tracking-tight text-white">Executive Head Teacher Command</h1>
+                        <p class="text-slate-400 text-sm mt-1">Real-time supervision metrics for teachers, student analytics, and institution approvals.</p>
+                    </div>
+                    <button onclick="renderHeadTeacherDashboard()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center gap-2">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        Refresh Feed
+                    </button>
+                </div>
+
+                <!-- Professional Metric Cards Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-lg">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Total Teachers</span>
+                            <span class="p-2 bg-indigo-500/10 text-indigo-400 rounded-xl">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            </span>
+                        </div>
+                        <p id="ht-total-teachers" class="text-3xl font-extrabold text-white mt-4">0</p>
+                        <span class="text-xs text-slate-500 mt-1 block">Active academic staff</span>
+                    </div>
+
+                    <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-lg">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Pending Verifications</span>
+                            <span class="p-2 bg-amber-500/10 text-amber-400 rounded-xl">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            </span>
+                        </div>
+                        <p id="ht-pending-approvals" class="text-3xl font-extrabold text-amber-400 mt-4">0</p>
+                        <span class="text-xs text-slate-500 mt-1 block">Requires payment sign-off</span>
+                    </div>
+
+                    <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-lg">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Institution Status</span>
+                            <span class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </span>
+                        </div>
+                        <p class="text-xl font-bold text-emerald-400 mt-4">Operational</p>
+                        <span class="text-xs text-slate-500 mt-1 block">System sync normal</span>
+                    </div>
+
+                    <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-lg">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Active Term</span>
+                            <span class="p-2 bg-blue-500/10 text-blue-400 rounded-xl">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            </span>
+                        </div>
+                        <p class="text-xl font-bold text-white mt-4">Term 2, 2026</p>
+                        <span class="text-xs text-slate-500 mt-1 block">Weeks remaining: 6</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Staff & Approvals Content -->
+            <div id="ht-tab-content-staff" class="hidden space-y-6">
+                <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-6 shadow-xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-white">School Staff Directory & Approvals</h2>
+                            <p class="text-slate-400 text-xs mt-1">Authorize new teacher registrations or review active staff records.</p>
+                        </div>
+                    </div>
+                    <div id="ht-staff-list" class="text-slate-400 text-sm">
+                        <p>Loading administrative directory...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Academics Content Placeholder -->
+            <div id="ht-tab-content-academics" class="hidden space-y-6">
+                <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-lg font-bold text-white mb-2">Academic Performance & Grade Tracking</h2>
+                    <p class="text-slate-400 text-sm">Review term evaluations, automated grade summaries, and assessment analytics.</p>
+                </div>
+            </div>
+
+            <!-- Tab 4: Reports Content Placeholder -->
+            <div id="ht-tab-content-reports" class="hidden space-y-6">
+                <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-lg font-bold text-white mb-2">Official Administrative Reports</h2>
+                    <p class="text-slate-400 text-sm">Export attendance sheets, financial verification audits, and ministry logs.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
                 <!-- Teacher Classes List -->
                 <div class="md:col-span-2 bg-slate-800/60 border border-slate-700 rounded-3xl p-6">
                     <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
