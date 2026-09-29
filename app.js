@@ -851,7 +851,6 @@ async function generateReportCard(studentName, className, marksArray, schoolDeta
 
 window.generateReportCard = generateReportCard;
 // ==========================================
-// ==========================================
 // 7. USER DIRECTORY RENDERER (SUPER ADMIN)
 // ==========================================
 window.loadUserDirectory = async function() {
@@ -861,14 +860,8 @@ window.loadUserDirectory = async function() {
     try {
         tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-indigo-400 font-mono">Loading user directory...</td></tr>`;
 
-        // Support both supabaseClient and supabase variable names
-        const dbClient = typeof supabaseClient !== 'undefined' ? supabaseClient : (typeof supabase !== 'undefined' ? supabase : null);
-        
-        if (!dbClient) {
-            throw new Error('Supabase client is not initialized.');
-        }
-
-        const { data: profiles, error } = await dbClient
+        // Directly use the global supabase object
+        const { data: profiles, error } = await supabase
             .from('profiles')
             .select('*')
             .order('created_at', { ascending: false });
