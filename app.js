@@ -1988,6 +1988,8 @@ function switchHtTab(tabName) {
 // Data Loader & Renderer for Head Teacher Dashboard (Staff & Students)
 async function renderHeadTeacherDashboard() {
     const currentUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
+    console.log('Current Logged-in User:', currentUser);
+
     const schoolName = currentUser.school || '';
 
     if (schoolName) {
@@ -1996,13 +1998,12 @@ async function renderHeadTeacherDashboard() {
     }
 
     try {
-        // Fetch all profiles from Supabase for this school (or all if school isn't strictly set)
-        let query = supabaseClient.from('profiles').select('*');
-        if (schoolName) {
-            query = query.eq('school', schoolName);
-        }
+        // Fetch all profiles from Supabase
+        const { data: profiles, error } = await supabaseClient
+            .from('profiles')
+            .select('*');
 
-        const { data: profiles, error } = await query;
+        console.log('All Profiles fetched from Supabase:', profiles);
 
         if (error) throw error;
 
@@ -2010,15 +2011,20 @@ async function renderHeadTeacherDashboard() {
             console.log('No profiles found.');
             const staffContainer = document.getElementById('ht-staff-list');
             if (staffContainer) {
-                staffContainer.innerHTML = '<p class="text-slate-400 py-4">No staff or student members found registered under this school yet.</p>';
+                staffContainer.innerHTML = '<p class="text-slate-400 py-4">No profiles found in the database table.</p>';
             }
             return;
         }
 
-        // Separate staff/teachers and students
-        const teachers = profiles.filter(p => p.role === 'teacher' || p.role === 'owner');
-        const students = profiles.filter(p => p.role === 'student');
-        const pendingCount = profiles.filter(s => s.account_status === 'pending').length;
+        // Filter by school only if the profile row has a school property matching the user's school,
+        // otherwise display all profiles if school fields are blank in the DB.
+        const filteredProfiles = schoolName 
+            ? profiles.filter(p => !p.school || p.school.trim().toLowerCase() === schoolName.trim().toLowerCase())
+            : profiles;
+
+        const teachers = filteredProfiles.filter(p => p.role === 'teacher' || p.role === 'owner');
+        const students = filteredProfiles.filter(p => p.role === 'student');
+        const pendingCount = filteredProfiles.filter(s => s.account_status === 'pending').length;
 
         // Update KPI metrics on UI
         const totalTeachersEl = document.getElementById('ht-total-teachers');
@@ -2129,7 +2135,6 @@ async function approveStaff(userId) {
     renderHeadTeacherDashboard();
 }
 
-// Automatically load on page initialization
 document.addEventListener('DOMContentLoaded', () => {
     renderHeadTeacherDashboard();
 });
