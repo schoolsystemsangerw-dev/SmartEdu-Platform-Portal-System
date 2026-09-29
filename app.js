@@ -1995,9 +1995,12 @@ function switchHtTab(tabName) {
 }
 // Data Loader & Renderer for Head Teacher Dashboard (Staff & Students)
 async function renderHeadTeacherDashboard() {
-    // Only run if we are actually on the Head Teacher dashboard page
+    // ABSOLUTE FIREWALL: Stop executing immediately if this element is missing from the page
     const staffContainer = document.getElementById('ht-staff-list');
-    if (!staffContainer) return;
+    if (!staffContainer) {
+        console.log('Aborted renderHeadTeacherDashboard: Not on Head Teacher page.');
+        return;
+    }
 
     const currentUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
     console.log('Current Logged-in User:', currentUser);
@@ -2085,7 +2088,8 @@ async function renderHeadTeacherDashboard() {
         });
 
         html += `</tbody></table></div></div>`;
-// Students Section
+
+        // Students Section
         html += `
             <div>
                 <h3 class="text-white font-semibold text-lg mb-4">Registered Students (${students.length})</h3>
@@ -2110,7 +2114,7 @@ async function renderHeadTeacherDashboard() {
                         <span class="px-2.5 py-1 text-xs rounded-full bg-blue-500/10 text-blue-400 font-medium">Active Student</span>
                     </td>
                 </tr>
-            `; // <-- Added closing backtick here
+            `;
         });
 
         html += `</tbody></table></div></div>`;
@@ -2135,8 +2139,8 @@ async function approveStaff(userId) {
     }
 
     alert('Staff account approved successfully!');
+    renderHeadTeacherDashboard();
 }
-
 // ==========================================
 // Single Master Dashboard Dispatcher
 // ==========================================
