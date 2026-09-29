@@ -28,16 +28,24 @@ function getDirectImageUrl(url) {
     return cleanUrl;
 }
 
-// Session State Helper
+// Session State Helper (Supports both storage keys for safety)
 const Session = {
-    getUser: () => JSON.parse(localStorage.getItem('portal_current_user') || 'null'),
-    setUser: (user) => localStorage.setItem('portal_current_user', JSON.stringify(user)),
-    clear: () => localStorage.removeItem('portal_current_user')
+    getUser: () => {
+        const userStr = localStorage.getItem('portal_current_user') || localStorage.getItem('currentUser');
+        return userStr ? JSON.parse(userStr) : null;
+    },
+    setUser: (user) => {
+        localStorage.setItem('portal_current_user', JSON.stringify(user));
+        localStorage.setItem('currentUser', JSON.stringify(user));
+    },
+    clear: () => {
+        localStorage.removeItem('portal_current_user');
+        localStorage.removeItem('currentUser');
+    }
 };
 
 let currentUser = Session.getUser();
 let jitsiApi = null; // Master instance for Live Video Classes
-
 // Master Admin Access Control
 const MASTER_ADMIN_EMAIL = 'schoolsystems.ange.rw@gmail.com';
 
@@ -2136,6 +2144,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 // Automatically initialize the correct dashboard view when the page finishes loading
 document.addEventListener('DOMContentLoaded', () => {
+    currentUser = Session.getUser();
+
+    // Route rendering based on which container exists on the current page
+    if (document.getElementById('ht-staff-list')) {
+        renderHeadTeacherDashboard();
+    }
     if (document.getElementById('teacher-classes-cards')) {
         renderTeacherDashboard();
     }
