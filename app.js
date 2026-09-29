@@ -2135,7 +2135,6 @@ async function approveStaff(userId) {
     }
 
     alert('Staff account approved successfully!');
-    renderHeadTeacherDashboard();
 }
 
 // ==========================================
