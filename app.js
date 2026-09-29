@@ -360,7 +360,6 @@ function setupEventListeners() {
             renderStudentDashboard();
         });
     }
-}
 
 // Universal Cross-Platform Live Classroom Engine
 window.startLiveStream = function(classCode, className) {
