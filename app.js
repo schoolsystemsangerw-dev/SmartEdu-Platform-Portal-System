@@ -131,7 +131,6 @@ function showRoleDashboard(role) {
         renderStudentDashboard();
     }
 }
-
 // Auth UI Navigation
 function setupAuthTabs() {
     const tabLogin = document.getElementById('tab-login');
@@ -288,7 +287,7 @@ function setupEventListeners() {
         });
     }
 }
-    // Class Generator
+// Class Generator
     const createClassForm = document.getElementById('create-class-form');
     if (createClassForm) {
         createClassForm.addEventListener('submit', async (e) => {
