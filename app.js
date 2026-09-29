@@ -2142,18 +2142,16 @@ async function approveStaff(userId) {
 document.addEventListener('DOMContentLoaded', () => {
     renderHeadTeacherDashboard();
 });
-// Automatically initialize the correct dashboard view when the page finishes loading
+// Automatically initialize the correct dashboard view when the page finishes loading (Mutual Exclusive)
 document.addEventListener('DOMContentLoaded', () => {
     currentUser = Session.getUser();
 
-    // Route rendering based on which container exists on the current page
+    // Only run the function that matches the current page's unique container
     if (document.getElementById('ht-staff-list')) {
         renderHeadTeacherDashboard();
-    }
-    if (document.getElementById('teacher-classes-cards')) {
+    } else if (document.getElementById('teacher-classes-cards')) {
         renderTeacherDashboard();
-    }
-    if (document.getElementById('student-classes-cards')) {
+    } else if (document.getElementById('student-classes-cards')) {
         renderStudentDashboard();
     }
 });
