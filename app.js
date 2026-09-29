@@ -2,7 +2,7 @@
 const SUPABASE_URL = 'https://ggiwmwinrcxrkqcevqnz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_SYYnHD1Ws3cz5lva25quxQ_ey7XgL4v';
 
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Image URL Converter & Sanitizer
 function getDirectImageUrl(url) {
