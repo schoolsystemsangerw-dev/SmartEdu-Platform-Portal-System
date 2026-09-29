@@ -2085,8 +2085,7 @@ async function renderHeadTeacherDashboard() {
         });
 
         html += `</tbody></table></div></div>`;
-
-        // Students Section
+// Students Section
         html += `
             <div>
                 <h3 class="text-white font-semibold text-lg mb-4">Registered Students (${students.length})</h3>
@@ -2111,6 +2110,7 @@ async function renderHeadTeacherDashboard() {
                         <span class="px-2.5 py-1 text-xs rounded-full bg-blue-500/10 text-blue-400 font-medium">Active Student</span>
                     </td>
                 </tr>
+            `; // <-- Added closing backtick here
         });
 
         html += `</tbody></table></div></div>`;
@@ -2137,8 +2137,7 @@ async function approveStaff(userId) {
     alert('Staff account approved successfully!');
     renderHeadTeacherDashboard();
 }
-});
-// ==========================================
+
 // ==========================================
 // Single Master Dashboard Dispatcher
 // ==========================================
