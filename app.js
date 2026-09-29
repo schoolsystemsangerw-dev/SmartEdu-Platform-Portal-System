@@ -114,13 +114,20 @@ function showAuthSection() {
     const authSec = document.getElementById('auth-section');
     if (authSec) authSec.classList.remove('hidden');
 }
-
 function showRoleDashboard(role) {
     hideAllSections();
     if (role === 'owner') {
         const ownerDb = document.getElementById('owner-dashboard');
         if (ownerDb) ownerDb.classList.remove('hidden');
         renderOwnerDashboard();
+    } else if (role === 'head-teacher') {
+        const headTeacherDb = document.getElementById('head-teacher-dashboard');
+        if (headTeacherDb) headTeacherDb.classList.remove('hidden');
+        if (typeof renderHeadTeacherDashboard === 'function') {
+            renderHeadTeacherDashboard();
+        } else if (typeof loadHeadTeacherData === 'function') {
+            loadHeadTeacherData();
+        }
     } else if (role === 'teacher') {
         const teacherDb = document.getElementById('teacher-dashboard');
         if (teacherDb) teacherDb.classList.remove('hidden');
