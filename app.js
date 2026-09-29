@@ -2111,7 +2111,6 @@ async function renderHeadTeacherDashboard() {
                         <span class="px-2.5 py-1 text-xs rounded-full bg-blue-500/10 text-blue-400 font-medium">Active Student</span>
                     </td>
                 </tr>
-            `;
         });
 
         html += `</tbody></table></div></div>`;
