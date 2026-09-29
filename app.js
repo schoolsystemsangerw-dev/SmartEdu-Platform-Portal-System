@@ -2077,16 +2077,16 @@ async function approveStaff(userId) {
 }
 // Function to load profiles (Teachers & Students) into the Head Teacher Dashboard
 async function loadHeadTeacherData() {
-    // Safely retrieve the initialized Supabase client instance
-    const db = window.supabase || window.supabaseClient || window._supabase || (typeof supabase !== 'undefined' ? supabase : null);
+    // 💡 REPLACE `_supabase` with whatever variable name is used to initialize Supabase in your project
+    // e.g., window._supabase, window.supabaseClient, window.client, etc.
+    const db = window._supabase || window.supabase || window.supabaseClient;
 
     if (!db || typeof db.from !== 'function') {
-        console.error('Supabase client is not initialized or db.from is unavailable.');
+        console.error('Supabase client not found. Please check your global variable name.');
         return;
     }
 
     try {
-        // Fetch all profiles from Supabase
         const { data: profiles, error } = await db
             .from('profiles')
             .select('*');
@@ -2094,28 +2094,25 @@ async function loadHeadTeacherData() {
         if (error) throw error;
 
         if (!profiles || profiles.length === 0) {
-            console.log('No profiles found in the database.');
+            console.log('No profiles found.');
             return;
         }
 
-        // Filter teachers and students based on the 'role' column
         const teachers = profiles.filter(p => p.role === 'teacher' || p.role === 'owner');
         const students = profiles.filter(p => p.role === 'student');
 
-        // 1. Update the Total Teachers metric card on the Overview tab
+        // Update Total Teachers card
         const totalTeachersEl = document.getElementById('ht-total-teachers');
         if (totalTeachersEl) {
             totalTeachersEl.textContent = teachers.length;
         }
 
-        // 2. Render Staff & Teachers List into the Staff container
+        // Render Lists inside the Staff Tab container
         const staffContainer = document.getElementById('ht-staff-list');
         if (staffContainer) {
             let html = `
                 <div class="mb-8">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-white font-semibold text-lg">Registered Teachers (${teachers.length})</h3>
-                    </div>
+                    <h3 class="text-white font-semibold text-lg mb-4">Registered Teachers (${teachers.length})</h3>
                     <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50">
                         <table class="w-full text-left border-collapse text-sm">
                             <thead>
@@ -2144,12 +2141,9 @@ async function loadHeadTeacherData() {
 
             html += `</tbody></table></div></div>`;
 
-            // Render Students List below teachers
             html += `
                 <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-white font-semibold text-lg">Registered Students (${students.length})</h3>
-                    </div>
+                    <h3 class="text-white font-semibold text-lg mb-4">Registered Students (${students.length})</h3>
                     <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50">
                         <table class="w-full text-left border-collapse text-sm">
                             <thead>
@@ -2184,7 +2178,6 @@ async function loadHeadTeacherData() {
     }
 }
 
-// Automatically load data on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadHeadTeacherData();
 });
