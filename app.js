@@ -125,9 +125,11 @@ function showAuthSection() {
 function showRoleDashboard(role) {
     hideAllSections();
     
-    // Get actual logged-in user role from session to prevent mismatched calls
+  // Get actual logged-in user role from session to prevent mismatched calls
     const activeUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const actualRole = activeUser.role || role;
+    
+    // Force usage of the session/storage role first, fallback only if completely missing
+    const actualRole = activeUser && activeUser.role ? activeUser.role : (typeof role !== 'undefined' ? role : '');
 
     if (actualRole === 'owner') {
         const ownerDb = document.getElementById('owner-dashboard');
