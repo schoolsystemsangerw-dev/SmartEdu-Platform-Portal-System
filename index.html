@@ -299,30 +299,40 @@
             </div>
         </div>
  </section>
-        <!-- TEACHER DASHBOARD -->
-        <section id="teacher-dashboard" class="hidden space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                <!-- Quick Class Generator -->
-                <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6">
-                    <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                        <i data-lucide="plus-circle" class="text-indigo-400"></i> Create Class
-                    </h3>
-                    <form id="create-class-form" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 mb-1">Class Name</label>
-                            <input type="text" id="class-name" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white" placeholder="Primary 5 English">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 mb-1">Subject</label>
-                            <input type="text" id="class-subject" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white" placeholder="English Grammar & Writing">
-                        </div>
-                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition">
-                            Generate Class Code
-                        </button>
-                    </form>
+       <!-- TEACHER DASHBOARD -->
+    <section id="teacher-dashboard" class="hidden space-y-6 p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- Quick Class Generator -->
+            <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6 h-fit">
+                <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="text-indigo-400"></i> Create Class
+                </h3>
+                <form id="create-class-form" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Class Name</label>
+                        <input type="text" id="class-name" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white" placeholder="Primary 5 English">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Subject</label>
+                        <input type="text" id="class-subject" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white" placeholder="English Grammar & Writing">
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition">
+                        Generate Class Code
+                    </button>
+                </form>
+            </div>
+
+            <!-- Right Column: Classes Cards Container (Added) -->
+            <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4" id="teacher-classes-cards">
+                <!-- Rendered classes will automatically populate here -->
+                <div class="col-span-2 text-center py-12 text-slate-500 italic text-xs">
+                    Loading your classes...
                 </div>
-        </section>
+            </div>
+
+        </div>
+    </section>
        <!-- Head Teacher Dashboard View -->
 <div id="head-teacher-dashboard" class="hidden min-h-screen text-slate-100 bg-slate-950 font-sans">
     <div class="flex flex-col md:flex-row min-h-[calc(100vh-4rem)]">
