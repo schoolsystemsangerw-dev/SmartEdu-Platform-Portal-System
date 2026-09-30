@@ -2224,7 +2224,7 @@ async function renderHtAcademics() {
 
         let html = '';
 
-        // Loaded Exams Section
+        // Loaded Exams Section with Teacher Name & Email
         html += `
             <div class="mb-8">
                 <h3 class="text-white font-semibold text-base mb-3 flex items-center gap-2">
@@ -2235,6 +2235,7 @@ async function renderHtAcademics() {
                         <thead>
                             <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/80">
                                 <th class="py-3 px-4">Exam Title / Subject</th>
+                                <th class="py-3 px-4">Teacher Name & Email</th>
                                 <th class="py-3 px-4">Class</th>
                                 <th class="py-3 px-4">Date Created</th>
                                 <th class="py-3 px-4 text-right">Status</th>
@@ -2244,12 +2245,19 @@ async function renderHtAcademics() {
         `;
 
         if (!exams || exams.length === 0) {
-            html += `<tr><td colspan="4" class="py-6 text-center text-slate-500 text-xs">No exams loaded by teachers yet.</td></tr>`;
+            html += `<tr><td colspan="5" class="py-6 text-center text-slate-500 text-xs">No exams loaded by teachers yet.</td></tr>`;
         } else {
             exams.forEach(exam => {
+                const teacherName = exam.teacher_name || exam.name || exam.created_by || 'Teacher';
+                const teacherEmail = exam.teacher_email || exam.email || exam.user_email || 'No email provided';
+
                 html += `
                     <tr class="hover:bg-slate-800/40 transition">
                         <td class="py-3.5 px-4 font-medium text-white">${exam.title || exam.subject || 'Unnamed Exam'}</td>
+                        <td class="py-3.5 px-4">
+                            <div class="font-medium text-white">${teacherName}</div>
+                            <div class="text-xs text-slate-400">${teacherEmail}</div>
+                        </td>
                         <td class="py-3.5 px-4 text-slate-300">${exam.class_name || exam.class || 'N/A'}</td>
                         <td class="py-3.5 px-4 text-slate-400">${exam.created_at ? new Date(exam.created_at).toLocaleDateString() : 'N/A'}</td>
                         <td class="py-3.5 px-4 text-right">
@@ -2262,11 +2270,11 @@ async function renderHtAcademics() {
 
         html += `</tbody></table></div></div>`;
 
-        // Student Submissions Section with Name & Email
+        // Student Submissions Section with Name, Email & Marks Obtained
         html += `
             <div>
                 <h3 class="text-white font-semibold text-base mb-3 flex items-center gap-2">
-                    <span>📊</span> Student Exam Submissions & Grades (${submissions ? submissions.length : 0})
+                    <span>📊</span> Student Exam Submissions & Marks Obtained (${submissions ? submissions.length : 0})
                 </h3>
                 <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50">
                     <table class="w-full text-left border-collapse text-sm">
@@ -2274,7 +2282,7 @@ async function renderHtAcademics() {
                             <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/80">
                                 <th class="py-3 px-4">Student Name & Email</th>
                                 <th class="py-3 px-4">Exam ID / Subject</th>
-                                <th class="py-3 px-4">Score / Details</th>
+                                <th class="py-3 px-4">Marks / Score Obtained</th>
                                 <th class="py-3 px-4 text-right">Submission Date</th>
                             </tr>
                         </thead>
@@ -2285,6 +2293,10 @@ async function renderHtAcademics() {
             html += `<tr><td colspan="4" class="py-6 text-center text-slate-500 text-xs">No student exam submissions recorded yet.</td></tr>`;
         } else {
             submissions.forEach(sub => {
+                const marksValue = sub.marks !== undefined && sub.marks !== null ? sub.marks : 
+                                   (sub.score !== undefined && sub.score !== null ? sub.score : null);
+                const displayMarks = marksValue !== null ? `${marksValue}${typeof marksValue === 'number' && marksValue <= 100 ? '%' : ''}` : 'Submitted';
+
                 html += `
                     <tr class="hover:bg-slate-800/40 transition">
                         <td class="py-3.5 px-4">
@@ -2292,7 +2304,7 @@ async function renderHtAcademics() {
                             <div class="text-xs text-slate-400">${sub.student_email || 'No email provided'}</div>
                         </td>
                         <td class="py-3.5 px-4 text-slate-300">Exam ID: ${sub.exam_id || 'N/A'}</td>
-                        <td class="py-3.5 px-4 font-bold text-emerald-400">${sub.score !== undefined && sub.score !== null ? sub.score + '%' : 'Submitted'}</td>
+                        <td class="py-3.5 px-4 font-bold text-emerald-400">${displayMarks}</td>
                         <td class="py-3.5 px-4 text-right text-slate-400">${sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString() : 'N/A'}</td>
                     </tr>
                 `;
