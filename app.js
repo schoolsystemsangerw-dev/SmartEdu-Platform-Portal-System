@@ -2322,3 +2322,46 @@ async function renderHtAcademics() {
         container.innerHTML = `<p class="text-red-400 py-6 text-center text-sm">Failed to load academic data: ${err.message}</p>`;
     }
 }
+// Render Comprehensive Official Reports & Database Insights
+async function renderOfficialReports() {
+    const container = document.getElementById('ht-academics-container');
+    if (!container) return;
+
+    container.innerHTML = `<div class="text-slate-400 py-8 text-center text-sm">Fetching live records from Supabase...</div>`;
+
+    try {
+        // Fetch data from Supabase tables
+        const { data: classes } = await supabaseClient.from('classes').select('*');
+        const { data: enrollments } = await supabaseClient.from('enrollments').select('*');
+        const { data: leaves } = await supabaseClient.from('teacher_leave_requests').select('*');
+
+        container.innerHTML = `
+            <div class="space-y-6">
+                <div class="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+                    <h3 class="text-white font-bold text-lg flex items-center gap-2 mb-2">
+                        <span>📑</span> Official Administrative & Database Audit
+                    </h3>
+                    <p class="text-slate-400 text-sm">Real-time sync status from Supabase backend tables.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="p-5 rounded-xl bg-slate-900/40 border border-slate-800">
+                        <div class="text-slate-400 text-xs font-medium">Registered Classes</div>
+                        <div class="text-2xl font-bold text-white mt-1">${classes ? classes.length : 0}</div>
+                    </div>
+                    <div class="p-5 rounded-xl bg-slate-900/40 border border-slate-800">
+                        <div class="text-slate-400 text-xs font-medium">Student Enrollments</div>
+                        <div class="text-2xl font-bold text-white mt-1">${enrollments ? enrollments.length : 0}</div>
+                    </div>
+                    <div class="p-5 rounded-xl bg-slate-900/40 border border-slate-800">
+                        <div class="text-slate-400 text-xs font-medium">Teacher Leave Requests</div>
+                        <div class="text-2xl font-bold text-white mt-1">${leaves ? leaves.length : 0}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        console.error('Error fetching Supabase reports:', err);
+        container.innerHTML = `<p class="text-red-400 text-center py-6">Error loading reports: ${err.message}</p>`;
+    }
+}
