@@ -2000,6 +2000,11 @@ function switchHtTab(tabName) {
             }
         }
     });
+
+    // 👉 Trigger the academic data loader when the academics tab is clicked
+    if (tabName === 'academics') {
+        renderHtAcademics();
+    }
 }
 // Data Loader & Renderer for Head Teacher Dashboard (Staff & Students)
 async function renderHeadTeacherDashboard() {
