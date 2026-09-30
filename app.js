@@ -2324,46 +2324,70 @@ async function renderHtAcademics() {
         container.innerHTML = `<p class="text-red-400 py-6 text-center text-sm">Failed to load academic data: ${err.message}</p>`;
     }
 }
-// Render Comprehensive Official Reports & Database Insights
+// Render Official Administrative Reports & Supabase Insights
 async function renderOfficialReports() {
-    const container = document.getElementById('ht-academics-container');
-    if (!container) return;
+    const container = document.getElementById('ht-tab-content-reports');
+    if (!container) {
+        console.error("Container 'ht-tab-content-reports' not found in HTML!");
+        return;
+    }
 
-    container.innerHTML = `<div class="text-slate-400 py-8 text-center text-sm">Fetching live records from Supabase...</div>`;
+    container.innerHTML = `<div class="text-slate-400 py-12 text-center text-sm animate-pulse">Fetching live administrative reports from Supabase...</div>`;
 
     try {
-        // Fetch data from Supabase tables
-        const { data: classes } = await supabaseClient.from('classes').select('*');
-        const { data: enrollments } = await supabaseClient.from('enrollments').select('*');
-        const { data: leaves } = await supabaseClient.from('teacher_leave_requests').select('*');
+        // Fetch real-time data from Supabase tables
+        const [classesRes, enrollmentsRes, leavesRes] = await Promise.all([
+            supabaseClient.from('classes').select('*'),
+            supabaseClient.from('enrollments').select('*'),
+            supabaseClient.from('teacher_leave_requests').select('*')
+        ]);
+
+        const classesCount = classesRes.data ? classesRes.data.length : 0;
+        const enrollmentsCount = enrollmentsRes.data ? enrollmentsRes.data.length : 0;
+        const pendingLeaves = leavesRes.data ? leavesRes.data.filter(l => l.status === 'pending').length : 0;
 
         container.innerHTML = `
             <div class="space-y-6">
-                <div class="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-                    <h3 class="text-white font-bold text-lg flex items-center gap-2 mb-2">
-                        <span>📑</span> Official Administrative & Database Audit
-                    </h3>
-                    <p class="text-slate-400 text-sm">Real-time sync status from Supabase backend tables.</p>
+                <!-- Header Banner -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+                    <div>
+                        <h3 class="text-white font-bold text-lg flex items-center gap-2">
+                            <span>📑</span> Official Administrative Reports & Audit Center
+                        </h3>
+                        <p class="text-slate-400 text-sm mt-1">Export official attendance sheets, database summaries, and ministry logs.</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="alert('Exporting PDF Attendance Report...')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition shadow-lg shadow-indigo-600/20">
+                            📄 Export Attendance PDF
+                        </button>
+                        <button onclick="alert('Generating Ministry Compliance Log...')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition border border-slate-700">
+                            📊 Ministry Logs
+                        </button>
+                    </div>
                 </div>
 
+                <!-- Live Database Metrics from Supabase -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="p-5 rounded-xl bg-slate-900/40 border border-slate-800">
-                        <div class="text-slate-400 text-xs font-medium">Registered Classes</div>
-                        <div class="text-2xl font-bold text-white mt-1">${classes ? classes.length : 0}</div>
+                        <div class="text-slate-400 text-xs font-medium">Active Classes Recorded</div>
+                        <div class="text-2xl font-bold text-white mt-1">${classesCount}</div>
+                        <div class="text-emerald-400 text-xs mt-2">Synced from Supabase 'classes'</div>
                     </div>
                     <div class="p-5 rounded-xl bg-slate-900/40 border border-slate-800">
-                        <div class="text-slate-400 text-xs font-medium">Student Enrollments</div>
-                        <div class="text-2xl font-bold text-white mt-1">${enrollments ? enrollments.length : 0}</div>
+                        <div class="text-slate-400 text-xs font-medium">Total Student Enrollments</div>
+                        <div class="text-2xl font-bold text-white mt-1">${enrollmentsCount}</div>
+                        <div class="text-emerald-400 text-xs mt-2">Synced from Supabase 'enrollments'</div>
                     </div>
                     <div class="p-5 rounded-xl bg-slate-900/40 border border-slate-800">
-                        <div class="text-slate-400 text-xs font-medium">Teacher Leave Requests</div>
-                        <div class="text-2xl font-bold text-white mt-1">${leaves ? leaves.length : 0}</div>
+                        <div class="text-slate-400 text-xs font-medium">Pending Leave Requests</div>
+                        <div class="text-2xl font-bold text-white mt-1">${pendingLeaves}</div>
+                        <div class="text-amber-400 text-xs mt-2">Requires administrative review</div>
                     </div>
                 </div>
             </div>
         `;
     } catch (err) {
-        console.error('Error fetching Supabase reports:', err);
-        container.innerHTML = `<p class="text-red-400 text-center py-6">Error loading reports: ${err.message}</p>`;
+        console.error('Error fetching Supabase report metrics:', err);
+        container.innerHTML = `<p class="text-red-400 text-center py-6">Error loading report data: ${err.message}</p>`;
     }
 }
