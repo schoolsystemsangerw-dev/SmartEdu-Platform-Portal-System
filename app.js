@@ -2215,7 +2215,7 @@ async function renderHtAcademics() {
 
         if (examsError) throw examsError;
 
-        // 2. Fetch student submissions from the correct 'submissions' table
+        // 2. Fetch student submissions from the 'submissions' table
         const { data: submissions, error: subError } = await supabaseClient
             .from('submissions')
             .select('*');
@@ -2270,7 +2270,7 @@ async function renderHtAcademics() {
 
         html += `</tbody></table></div></div>`;
 
-        // Student Submissions Section with Name, Email & Marks Obtained
+        // Student Submissions Section with Score Obtained & Total Marks
         html += `
             <div>
                 <h3 class="text-white font-semibold text-base mb-3 flex items-center gap-2">
@@ -2282,7 +2282,7 @@ async function renderHtAcademics() {
                             <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/80">
                                 <th class="py-3 px-4">Student Name & Email</th>
                                 <th class="py-3 px-4">Exam ID / Subject</th>
-                                <th class="py-3 px-4">Marks / Score Obtained</th>
+                                <th class="py-3 px-4">Marks Obtained</th>
                                 <th class="py-3 px-4 text-right">Submission Date</th>
                             </tr>
                         </thead>
@@ -2293,9 +2293,11 @@ async function renderHtAcademics() {
             html += `<tr><td colspan="4" class="py-6 text-center text-slate-500 text-xs">No student exam submissions recorded yet.</td></tr>`;
         } else {
             submissions.forEach(sub => {
-                const marksValue = sub.marks !== undefined && sub.marks !== null ? sub.marks : 
-                                   (sub.score !== undefined && sub.score !== null ? sub.score : null);
-                const displayMarks = marksValue !== null ? `${marksValue}${typeof marksValue === 'number' && marksValue <= 100 ? '%' : ''}` : 'Submitted';
+                const score = sub.score_obtained !== undefined && sub.score_obtained !== null ? sub.score_obtained : null;
+                const total = sub.total_marks !== undefined && sub.total_marks !== null ? sub.total_marks : 100;
+                const percentage = sub.percentage !== undefined && sub.percentage !== null ? sub.percentage : (score !== null ? Math.round((score / total) * 100) : null);
+                
+                const displayMarks = score !== null ? `${score} / ${total} (${percentage}%)` : 'Submitted';
 
                 html += `
                     <tr class="hover:bg-slate-800/40 transition">
