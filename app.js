@@ -2001,9 +2001,11 @@ function switchHtTab(tabName) {
         }
     });
 
-    // 👉 Trigger the academic data loader when the academics tab is clicked
+    // 👉 Trigger specific tab data loaders
     if (tabName === 'academics') {
         renderHtAcademics();
+    } else if (tabName === 'reports') {
+        renderOfficialReports();
     }
 }
 // Data Loader & Renderer for Head Teacher Dashboard (Staff & Students)
