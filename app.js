@@ -308,8 +308,8 @@ function setupEventListeners() {
             checkSession();
         });
     }
-}
-// Class Generator
+
+    // Class Generator Form Handler (Safely inside setupEventListeners)
     const createClassForm = document.getElementById('create-class-form');
     if (createClassForm) {
         createClassForm.addEventListener('submit', async (e) => {
@@ -337,7 +337,7 @@ function setupEventListeners() {
         });
     }
 
-    // Student Join Class
+    // Student Join Class Form Handler (Safely inside setupEventListeners)
     const joinClassForm = document.getElementById('join-class-form');
     if (joinClassForm) {
         joinClassForm.addEventListener('submit', async (e) => {
@@ -382,7 +382,7 @@ function setupEventListeners() {
             renderStudentDashboard();
         });
     }
-
+}
 // Universal Cross-Platform Live Classroom Engine
 window.startLiveStream = function(classCode, className) {
     const modal = document.getElementById('live-stream-modal');
