@@ -2205,7 +2205,7 @@ async function renderHtAcademics() {
     const container = document.getElementById('ht-academics-container');
     if (!container) return;
 
-    container.innerHTML = `<div class="text-slate-400 py-8 text-center text-sm">Loading exams and student performance from Supabase...</div>`;
+    container.innerHTML = `<div class="text-slate-400 py-8 text-center text-sm">Loading exams and student submissions from Supabase...</div>`;
 
     try {
         // 1. Fetch exams created/loaded by teachers
@@ -2215,9 +2215,9 @@ async function renderHtAcademics() {
 
         if (examsError) throw examsError;
 
-        // 2. Fetch student exam submissions & grades
+        // 2. Fetch student submissions from the correct 'submissions' table
         const { data: submissions, error: subError } = await supabaseClient
-            .from('exam_submissions')
+            .from('submissions')
             .select('*');
 
         if (subError) throw subError;
@@ -2262,7 +2262,7 @@ async function renderHtAcademics() {
 
         html += `</tbody></table></div></div>`;
 
-        // Student Performance / Submissions Section
+        // Student Submissions Section with Name & Email
         html += `
             <div>
                 <h3 class="text-white font-semibold text-base mb-3 flex items-center gap-2">
@@ -2272,9 +2272,9 @@ async function renderHtAcademics() {
                     <table class="w-full text-left border-collapse text-sm">
                         <thead>
                             <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/80">
-                                <th class="py-3 px-4">Student Name</th>
-                                <th class="py-3 px-4">Exam / Subject</th>
-                                <th class="py-3 px-4">Score Obtained</th>
+                                <th class="py-3 px-4">Student Name & Email</th>
+                                <th class="py-3 px-4">Exam ID / Subject</th>
+                                <th class="py-3 px-4">Score / Details</th>
                                 <th class="py-3 px-4 text-right">Submission Date</th>
                             </tr>
                         </thead>
@@ -2287,10 +2287,13 @@ async function renderHtAcademics() {
             submissions.forEach(sub => {
                 html += `
                     <tr class="hover:bg-slate-800/40 transition">
-                        <td class="py-3.5 px-4 font-medium text-white">${sub.student_name || sub.student_email || 'Student'}</td>
-                        <td class="py-3.5 px-4 text-slate-300">${sub.exam_id || sub.subject || 'Assessment'}</td>
-                        <td class="py-3.5 px-4 font-bold text-emerald-400">${sub.score !== undefined ? sub.score + '%' : 'N/A'}</td>
-                        <td class="py-3.5 px-4 text-right text-slate-400">${sub.created_at ? new Date(sub.created_at).toLocaleDateString() : 'N/A'}</td>
+                        <td class="py-3.5 px-4">
+                            <div class="font-medium text-white">${sub.student_name || 'Unknown Student'}</div>
+                            <div class="text-xs text-slate-400">${sub.student_email || 'No email provided'}</div>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-300">Exam ID: ${sub.exam_id || 'N/A'}</td>
+                        <td class="py-3.5 px-4 font-bold text-emerald-400">${sub.score !== undefined && sub.score !== null ? sub.score + '%' : 'Submitted'}</td>
+                        <td class="py-3.5 px-4 text-right text-slate-400">${sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString() : 'N/A'}</td>
                     </tr>
                 `;
             });
