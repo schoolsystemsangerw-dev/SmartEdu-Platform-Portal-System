@@ -2043,13 +2043,18 @@ async function renderHeadTeacherDashboard() {
             ? profiles.filter(p => !p.school || p.school.trim().toLowerCase() === schoolName.trim().toLowerCase())
             : profiles;
 
-        const teachers = filteredProfiles.filter(p => p.role === 'teacher' || p.role === 'owner');
+        // FIXED: Included 'head-teacher' so leadership and staff are properly grouped
+        const teachers = filteredProfiles.filter(p => p.role === 'teacher' || p.role === 'owner' || p.role === 'head-teacher');
         const students = filteredProfiles.filter(p => p.role === 'student');
         const pendingCount = filteredProfiles.filter(s => s.account_status === 'pending').length;
 
         // Update KPI metrics on UI
         const totalTeachersEl = document.getElementById('ht-total-teachers');
         if (totalTeachersEl) totalTeachersEl.textContent = teachers.length;
+
+        // ADDED: Update Total Students count on UI
+        const totalStudentsEl = document.getElementById('ht-total-students');
+        if (totalStudentsEl) totalStudentsEl.textContent = students.length;
 
         const pendingApprovalsEl = document.getElementById('ht-pending-approvals');
         if (pendingApprovalsEl) pendingApprovalsEl.textContent = pendingCount;
