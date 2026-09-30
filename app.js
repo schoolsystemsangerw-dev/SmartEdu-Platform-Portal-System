@@ -2195,3 +2195,108 @@ if (window.hasInitializedDashboard !== true) {
         }
     });
 }
+// Data Loader & Renderer for Head Teacher Academic Performance
+async function renderHtAcademics() {
+    const container = document.getElementById('ht-academics-container');
+    if (!container) return;
+
+    container.innerHTML = `<div class="text-slate-400 py-8 text-center text-sm">Loading exams and student performance from Supabase...</div>`;
+
+    try {
+        // 1. Fetch exams created/loaded by teachers
+        const { data: exams, error: examsError } = await supabaseClient
+            .from('exams')
+            .select('*');
+
+        if (examsError) throw examsError;
+
+        // 2. Fetch student exam submissions & grades
+        const { data: submissions, error: subError } = await supabaseClient
+            .from('exam_submissions')
+            .select('*');
+
+        if (subError) throw subError;
+
+        let html = '';
+
+        // Loaded Exams Section
+        html += `
+            <div class="mb-8">
+                <h3 class="text-white font-semibold text-base mb-3 flex items-center gap-2">
+                    <span>📚</span> Loaded Teacher Exams (${exams ? exams.length : 0})
+                </h3>
+                <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/80">
+                                <th class="py-3 px-4">Exam Title / Subject</th>
+                                <th class="py-3 px-4">Class</th>
+                                <th class="py-3 px-4">Date Created</th>
+                                <th class="py-3 px-4 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60 text-slate-300">
+        `;
+
+        if (!exams || exams.length === 0) {
+            html += `<tr><td colspan="4" class="py-6 text-center text-slate-500 text-xs">No exams loaded by teachers yet.</td></tr>`;
+        } else {
+            exams.forEach(exam => {
+                html += `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-3.5 px-4 font-medium text-white">${exam.title || exam.subject || 'Unnamed Exam'}</td>
+                        <td class="py-3.5 px-4 text-slate-300">${exam.class_name || exam.class || 'N/A'}</td>
+                        <td class="py-3.5 px-4 text-slate-400">${exam.created_at ? new Date(exam.created_at).toLocaleDateString() : 'N/A'}</td>
+                        <td class="py-3.5 px-4 text-right">
+                            <span class="px-2.5 py-1 text-xs rounded-full bg-indigo-500/10 text-indigo-400 font-semibold">Active</span>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        html += `</tbody></table></div></div>`;
+
+        // Student Performance / Submissions Section
+        html += `
+            <div>
+                <h3 class="text-white font-semibold text-base mb-3 flex items-center gap-2">
+                    <span>📊</span> Student Exam Submissions & Grades (${submissions ? submissions.length : 0})
+                </h3>
+                <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/80">
+                                <th class="py-3 px-4">Student Name</th>
+                                <th class="py-3 px-4">Exam / Subject</th>
+                                <th class="py-3 px-4">Score Obtained</th>
+                                <th class="py-3 px-4 text-right">Submission Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60 text-slate-300">
+        `;
+
+        if (!submissions || submissions.length === 0) {
+            html += `<tr><td colspan="4" class="py-6 text-center text-slate-500 text-xs">No student exam submissions recorded yet.</td></tr>`;
+        } else {
+            submissions.forEach(sub => {
+                html += `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-3.5 px-4 font-medium text-white">${sub.student_name || sub.student_email || 'Student'}</td>
+                        <td class="py-3.5 px-4 text-slate-300">${sub.exam_id || sub.subject || 'Assessment'}</td>
+                        <td class="py-3.5 px-4 font-bold text-emerald-400">${sub.score !== undefined ? sub.score + '%' : 'N/A'}</td>
+                        <td class="py-3.5 px-4 text-right text-slate-400">${sub.created_at ? new Date(sub.created_at).toLocaleDateString() : 'N/A'}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        html += `</tbody></table></div></div>`;
+
+        container.innerHTML = html;
+
+    } catch (err) {
+        console.error('Error loading academic performance:', err);
+        container.innerHTML = `<p class="text-red-400 py-6 text-center text-sm">Failed to load academic data: ${err.message}</p>`;
+    }
+}
