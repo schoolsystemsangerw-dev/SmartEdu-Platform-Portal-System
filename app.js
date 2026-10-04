@@ -1235,15 +1235,17 @@ window.viewStudentMarkingGuide = async function(examId) {
     modal.classList.remove('hidden');
     if (title) title.innerText = "Loading Marking Guide...";
     if (subtitle) subtitle.innerText = "Please wait while we retrieve your results.";
-    if (body) body.innerHTML = `
-        <div class="flex flex-col items-center justify-center p-8 space-y-3">
-            <svg class="animate-spin h-6 w-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12Here is the polished and fully compatible version of your **`viewStudentMarkingGuide`** function. It correctly queries the student's previous submission from Supabase, parses their saved answers safely, and opens the modal to display their detailed grading breakdown and score review at any time from their dashboard:
-
-```javascript
-// View Student Marking Guide anytime from Student Dashboard
-window.viewStudentMarkingGuide = async function(examId) {
+   if (body) {
+        body.innerHTML = `
+            <div class="flex flex-col items-center justify-center p-8 space-y-3">
+                <svg class="animate-spin h-6 w-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h8z"></path>
+                </svg>
+                <p class="text-xs text-slate-400">Loading your marking guide...</p>
+            </div>
+        `;
+    }
     const studentEmail = currentUser?.email || 'student@smartedu.rw';
 
     const { data: exam, error: examErr } = await supabaseClient
