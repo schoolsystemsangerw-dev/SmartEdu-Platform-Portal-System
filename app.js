@@ -1235,7 +1235,7 @@ window.viewStudentMarkingGuide = async function(examId) {
     modal.classList.remove('hidden');
     if (title) title.innerText = "Loading Marking Guide...";
     if (subtitle) subtitle.innerText = "Please wait while we retrieve your results.";
-   if (body) {
+    if (body) {
         body.innerHTML = `
             <div class="flex flex-col items-center justify-center p-8 space-y-3">
                 <svg class="animate-spin h-6 w-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1263,6 +1263,7 @@ window.viewStudentMarkingGuide = async function(examId) {
 
     if (examErr || subErr || !exam || !sub) {
         alert("Could not retrieve your submission or marking guide. Please check if you have completed this exam.");
+        modal.classList.add('hidden');
         return;
     }
 
@@ -1274,10 +1275,7 @@ window.viewStudentMarkingGuide = async function(examId) {
         parsedAnswers = {};
     }
 
-    const modal = document.getElementById('exam-modal');
-    if (modal) {
-        modal.classList.remove('hidden');
-    }
+    modal.classList.remove('hidden');
 
     // Reuse your robust marking guide renderer
     window.renderMarkingGuideInModal(exam, parsedAnswers, sub.score_obtained, sub.percentage);
@@ -1301,18 +1299,11 @@ window.viewExamResults = async function(examId) {
         <div class="flex flex-col items-center justify-center p-8 space-y-3">
             <svg class="animate-spin h-6 w-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12hHere is the clean, polished code for your **`viewExamResults`** function. It retrieves all student submissions for a specific exam from Supabase, orders them from highest to lowest score, and displays them in a sleek, responsive table inside the modal with pass/fail badges:
-
-```javascript
-// Teacher View Exam Results Modal
-window.viewExamResults = async function(examId) {
-    const modal = document.getElementById('exam-modal');
-    const title = document.getElementById('exam-modal-title');
-    const subtitle = document.getElementById('exam-modal-subtitle');
-    const body = document.getElementById('exam-modal-body');
-    const footer = document.getElementById('exam-modal-footer');
-
-    if (!modal) return;
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h8z"></path>
+            </svg>
+            <p class="text-xs text-slate-400">Fetching student scores...</p>
+        </div>
+    `;
 
     // Fetch exam details
     const { data: exam, error: examError } = await supabaseClient
@@ -1323,6 +1314,7 @@ window.viewExamResults = async function(examId) {
 
     if (examError || !exam) {
         alert("Could not load exam details.");
+        modal.classList.add('hidden');
         return;
     }
 
@@ -1378,13 +1370,14 @@ window.viewExamResults = async function(examId) {
         `;
     }
 
-    footer.innerHTML = `
-        <button onclick="window.closeExamModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition">Close</button>
-    `;
+    if (footer) {
+        footer.innerHTML = `
+            <button onclick="window.closeExamModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition">Close</button>
+        `;
+    }
 
     modal.classList.remove('hidden');
 };
-
 // ==========================================
 // HELP DESK, MODAL & USER DIRECTORY MODULE
 // ==========================================
