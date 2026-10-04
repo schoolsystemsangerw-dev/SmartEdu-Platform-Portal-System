@@ -1078,10 +1078,10 @@ window.submitStudentExam = async function(examId) {
     try {
         questionsList = typeof exam.questions === 'string' ? JSON.parse(exam.questions) : exam.questions;
     } catch (e) {
-        questionsList = (exam.questions || '').split('\n').filter(l => l.trim() !== '').map((line, idx) => ({
-            question: line,
-            answer: line.includes('{') ? (line.match(/\{([^}]+)\/)?/) || ['',''] )[1] : ''
-        }));
+     questionsList = (exam.questions || '').split('\n').filter(l => l.trim() !== '').map((line, idx) => ({
+        question: line,
+        answer: line.includes('{') ? (line.match(/\{([^}]+)\}/) || ['',''])[1] : ''
+    }));
     }
 
     let correctCount = 0;
