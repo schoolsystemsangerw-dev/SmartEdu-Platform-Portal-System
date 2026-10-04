@@ -853,18 +853,6 @@ window.saveExam = async function(classCode) {
         alert("Please enter an exam title.");
         return;
     }
-
-    // Show loading state on modal footer
-    const footer = document.getElementById('exam-modal-footer');
-    footer.innerHTML = `
-        <div class="flex items-center gap-2 text-indigo-400 text-xs font-bold py-2">
-            <svg class="animate-spin h-4 w-4 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12Here is the upgraded `window.saveExam` function integrated with the **Google Gemini API**. 
-
-When the teacher clicks **Publish AI Exam**, this function reads the pasted text (or an uploaded file), sends it directly to Gemini with a system prompt instructing it to format the text into structured JSON questions and answers, and then stores the clean package straight into your Supabase database.
-
-```javascript
 // Save and Publish Exam using Google Gemini API to parse text/files
 window.saveExam = async function(classCode) {
     const titleInput = document.getElementById('exam-title');
