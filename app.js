@@ -2497,3 +2497,4 @@ async function renderOfficialReports() {
         container.innerHTML = `<p class="text-red-400 text-center py-6">Error loading report data: ${err.message}</p>`;
     }
 }
+}
