@@ -303,7 +303,7 @@
     <section id="teacher-dashboard" class="hidden space-y-6 p-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            <!-- Left Column: Quick Class Generator & AI Exam Generator -->
+           <!-- Left Column: Quick Class Generator & AI Exam Generator -->
             <div class="space-y-6">
                 <!-- Create Class Card -->
                 <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6 h-fit">
@@ -333,6 +333,12 @@
                     <p class="text-slate-400 text-xs mb-4">Upload a document (PCB notes or past papers) to auto-generate questions.</p>
                     
                     <div class="space-y-3">
+                        <!-- API Key Input Field (Added to keep your repository safe from GitHub warnings) -->
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-400 mb-1">Gemini API Key</label>
+                            <input type="password" id="geminiApiKeyInput" placeholder="Paste your Gemini API Key here" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white">
+                        </div>
+
                         <div>
                             <label class="block text-[11px] font-bold text-slate-400 mb-1">Upload Document</label>
                             <input type="file" id="ai-exam-file" accept=".pdf,.doc,.docx,.txt" class="w-full text-xs text-slate-400 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 file:cursor-pointer border border-slate-700 rounded-xl bg-slate-900 p-1.5">
