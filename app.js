@@ -841,116 +841,49 @@ async function downloadMyReportCard(classCode, className) {
         year: selectedYear
     });
 }
-// Save & Publish Exam with Gemini AI Parsing & Supabase Integration
-window.saveExam = async function(classCode) {
-    const titleInput = document.getElementById('exam-title').value.trim();
-    const durationInput = document.getElementById('exam-duration').value;
-    const totalMarksInput = document.getElementById('exam-total-marks').value;
-    const questionsText = document.getElementById('exam-questions').value.trim();
-    const fileInput = document.getElementById('exam-file-input');
-    
-    if (!titleInput) {
-        alert("Please enter an exam title.");
-        return;
-    }
-
-    // Show loading state on modal footer
+// Open Exam Creation Modal for Teachers
+window.openCreateExamModal = function(classCode) {
+    const modal = document.getElementById('exam-modal');
+    const title = document.getElementById('exam-modal-title');
+    const subtitle = document.getElementById('exam-modal-subtitle');
+    const body = document.getElementById('exam-modal-body');
     const footer = document.getElementById('exam-modal-footer');
-    footer.innerHTML = `
-        <div class="flex items-center gap-2 text-indigo-400 text-xs font-bold py-2">
-            <svg class="animate-spin h-4 w-4 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12Here is the upgraded `window.saveExam` function integrated with the **Google Gemini API**. 
 
-When the teacher clicks **Publish AI Exam**, this function reads the pasted text (or an uploaded file), sends it directly to Gemini with a system prompt instructing it to format the text into structured JSON questions and answers, and then stores the clean package straight into your Supabase database.
+    if (!modal) return;
 
-```javascript
-// Save and Publish Exam using Google Gemini API to parse text/files
-window.saveExam = async function(classCode) {
-    const titleInput = document.getElementById('exam-title');
-    const durationInput = document.getElementById('exam-duration');
-    const totalMarksInput = document.getElementById('exam-total-marks');
-    const questionsTextarea = document.getElementById('exam-questions');
-    const fileInput = document.getElementById('exam-file-input');
+    title.innerText = "Create & Publish Class Exam";
+    subtitle.innerText = `Class Code: ${classCode}`;
 
-    if (!titleInput.value || !questionsTextarea.value) {
-        alert("Please provide an exam title and some source text or questions.");
-        return;
-    }
-
-    // Show loading state on modal footer or button
-    const footer = document.getElementById('exam-modal-footer');
-    footer.innerHTML = `
-        <span class="text-xs text-indigo-400 animate-pulse flex items-center gap-1.5">
-            <i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Gemini is structuring your exam...
-        </span>
+    body.innerHTML = `
+        <form id="create-exam-form" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1">Exam Title</label>
+                <input type="text" id="exam-title" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white" placeholder="e.g. Unit 2 Grammar Quiz">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">Duration (Minutes)</label>
+                    <input type="number" id="exam-duration" required value="30" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">Total Marks</label>
+                    <input type="number" id="exam-total-marks" required value="100" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1">Exam Questions (One per line)</label>
+                <p class="text-[11px] text-slate-500 mb-2">Use {Answer} for fill-in answers or [Option A* | Option B] for multiple choice.</p>
+                <textarea id="exam-questions" rows="6" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white font-mono" placeholder="1. What is the capital of Rwanda? {Kigali}&#10;2. Type multiple choice questions using options."></textarea>
+            </div>
+        </form>
     `;
-    if (window.lucide) lucide.createIcons();
 
-    try {
-        let sourceContent = questionsTextarea.value;
+    footer.innerHTML = `
+        <button onclick="window.closeExamModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition">Cancel</button>
+        <button onclick="window.saveExam('${classCode}')" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-lg">Publish Exam</button>
+    `;
 
-        // Optional: If a file was uploaded, you can read it as text or base64 here
-        if (fileInput && fileInput.files[0]) {
-            const file = fileInput.files[0];
-            sourceContent = await file.text(); // Reads text-based files; for PDFs/images, you can pass base64 to Gemini multimodal endpoints
-        }
-
-        // Call Gemini API to parse raw text into structured JSON questions
-        const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"; // Replace with your actual key or environment variable
-        const response = await fetch(`[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$){GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: `You are an expert educational AI assistant. Parse the following raw exam text into a strict JSON array of objects. Each object must have:
-                        - "question": string (the question text)
-                        - "type": string ("mcq" or "short-answer")
-                        - "options": array of strings (only if mcq, otherwise empty)
-                        - "answer": string (the correct answer)
-                        - "marks": number
-
-                        Raw Exam Text:
-                        ${sourceContent}`
-                    }]
-                }]
-            })
-        });
-
-        const data = await response.json();
-        const aiResponseText = data.candidates[0].content.parts[0].text;
-        
-        // Clean up markdown code blocks if Gemini wraps the JSON in them
-        const cleanJSON = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsedQuestions = JSON.parse(cleanJSON);
-
-        // Save to Supabase database table 'exams'
-        const { error } = await window.supabaseClient
-            .from('exams')
-            .insert([{
-                class_code: classCode,
-                title: titleInput.value,
-                duration_minutes: parseInt(durationInput.value),
-                total_marks: parseInt(totalMarksInput.value),
-                questions: parsedQuestions,
-                created_at: new Date()
-            }]);
-
-        if (error) throw error;
-
-        alert("Exam successfully parsed by Gemini and published!");
-        window.closeExamModal();
-        if (typeof window.loadClassExams === 'function') {
-            window.loadClassExams(classCode);
-        }
-
-    } catch (err) {
-        console.error("Error publishing AI exam:", err);
-        alert("Failed to parse or save exam. Please check your text format or API key.");
-        // Restore footer buttons on error
-        window.openCreateExamModal(classCode);
-    }
+    modal.classList.remove('hidden');
 };
 // Global Save Exam Handler for Teachers
 window.saveExam = async function(classCode) {
@@ -995,7 +928,7 @@ window.closeExamModal = function() {
     if (modal) modal.classList.add('hidden');
 };
 
-// Student Take Exam Modal Launcher (Upgraded for Structured JSON & AI Exams)
+// Student Take Exam Modal Launcher
 window.openStudentExam = async function(examId) {
     const { data: exam, error } = await supabaseClient
         .from('exams')
@@ -1017,33 +950,20 @@ window.openStudentExam = async function(examId) {
     if (!modal) return;
 
     title.innerText = exam.title;
-    subtitle.innerText = `Duration: ${exam.duration_minutes || 30} Mins | Total Marks: ${exam.total_marks || 100}`;
+    subtitle.innerText = `Duration: ${exam.duration_minutes} Mins | Total Marks: ${exam.total_marks}`;
 
-    // Safely parse questions whether stored as JSON array or raw text string
-    let questionsList = [];
-    try {
-        questionsList = typeof exam.questions === 'string' ? JSON.parse(exam.questions) : exam.questions;
-    } catch (e) {
-        // Fallback: If it's plain text lines
-        questionsList = (exam.questions || '').split('\n').filter(l => l.trim() !== '').map((line, idx) => ({
-            id: idx,
-            question: line,
-            type: line.includes('[') ? 'mcq' : 'short-answer',
-            options: line.includes('[') ? line.substring(line.indexOf('[') + 1, line.indexOf(']')).split('|').map(o => o.replace('*', '').trim()) : [],
-            answer: ''
-        }));
-    }
+    const lines = exam.questions.split('\n').filter(l => l.trim() !== '');
     
     let html = `<form id="student-exam-form" class="space-y-4">`;
-    
-    questionsList.forEach((q, idx) => {
+    lines.forEach((line, idx) => {
         html += `<div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">`;
-        html += `<div class="flex justify-between items-start"><p class="text-xs font-bold text-white">Q${idx + 1}. ${q.question || q}</p><span class="text-[10px] text-indigo-400 font-mono">${q.marks || 5} marks</span></div>`;
-
-        if (q.type === 'mcq' && q.options && q.options.length > 0) {
-            html += `<div class="space-y-1 mt-2">`;
-            q.options.forEach(opt => {
-                const cleanOpt = typeof opt === 'string' ? opt.replace('*', '').trim() : opt;
+        if (line.includes('[') && line.includes(']')) {
+            const qText = line.split('[')[0].trim();
+            const rawOptions = line.substring(line.indexOf('[') + 1, line.indexOf(']')).split('|');
+            
+            html += `<p class="text-xs font-bold text-white">${qText}</p><div class="space-y-1 mt-2">`;
+            rawOptions.forEach(opt => {
+                const cleanOpt = opt.replace('*', '').trim();
                 html += `
                     <label class="flex items-center gap-2 text-xs text-slate-300 p-2 bg-slate-900 rounded-lg border border-slate-800/80 cursor-pointer hover:bg-slate-800">
                         <input type="radio" name="q_${idx}" value="${cleanOpt}" class="text-indigo-600">
@@ -1052,14 +972,17 @@ window.openStudentExam = async function(examId) {
                 `;
             });
             html += `</div>`;
-        } else {
+        } else if (line.includes('{') && line.includes('}')) {
+            const qText = line.replace(/\{([^}]+)\}/g, '_____');
             html += `
+                <p class="text-xs font-bold text-white">${qText}</p>
                 <input type="text" name="q_${idx}" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-white mt-2" placeholder="Type your answer here...">
             `;
+        } else {
+            html += `<p class="text-xs font-bold text-white">${line}</p>`;
         }
         html += `</div>`;
     });
-    
     html += `</form>`;
 
     body.innerHTML = html;
@@ -1070,6 +993,7 @@ window.openStudentExam = async function(examId) {
 
     modal.classList.remove('hidden');
 };
+
 // Student Auto-Grading Submission Handler & Marking Guide Generator
 window.submitStudentExam = async function(examId) {
     const form = document.getElementById('student-exam-form');
@@ -1086,44 +1010,40 @@ window.submitStudentExam = async function(examId) {
         return;
     }
 
-    let questionsList = [];
-    try {
-        questionsList = typeof exam.questions === 'string' ? JSON.parse(exam.questions) : exam.questions;
-    } catch (e) {
-        questionsList = (exam.questions || '').split('\n').filter(l => l.trim() !== '').map((line, idx) => ({
-            question: line,
-            answer: line.includes('{') ? (line.match(/\{([^}]+)\/)?/) || ['',''] )[1] : ''
-        }));
-    }
-
+    const lines = exam.questions.split('\n').filter(l => l.trim() !== '');
+    let totalQuestions = lines.length;
     let correctCount = 0;
-    let totalPossibleMarks = exam.total_marks || 100;
-    let obtainedMarks = 0;
     const studentAnswers = {};
 
-    questionsList.forEach((q, idx) => {
-        let expectedAnswer = (q.answer || '').trim().toLowerCase();
+    lines.forEach((line, idx) => {
+        let expectedAnswer = "";
         let studentAnswer = "";
 
-        if (q.type === 'mcq') {
+        if (line.includes('[') && line.includes(']')) {
+            const rawOptions = line.substring(line.indexOf('[') + 1, line.indexOf(']')).split('|');
+            const correctOpt = rawOptions.find(o => o.includes('*'));
+            if (correctOpt) expectedAnswer = correctOpt.replace('*', '').trim().toLowerCase();
+
             const selectedRadio = form.querySelector(`input[name="q_${idx}"]:checked`);
             if (selectedRadio) studentAnswer = selectedRadio.value.trim().toLowerCase();
-        } else {
+        } else if (line.includes('{') && line.includes('}')) {
+            const match = line.match(/\{([^}]+)\}/);
+            if (match) expectedAnswer = match[1].trim().toLowerCase();
+
             const textInput = form.querySelector(`input[name="q_${idx}"]`);
             if (textInput) studentAnswer = textInput.value.trim().toLowerCase();
         }
 
         studentAnswers[`q_${idx}`] = studentAnswer;
 
-        // Lenient string match evaluation
         if (studentAnswer && expectedAnswer && studentAnswer === expectedAnswer) {
             correctCount++;
-            obtainedMarks += (q.marks || (totalPossibleMarks / questionsList.length));
         }
     });
 
-    const scoreObtained = Math.round(obtainedMarks);
-    const percentage = Math.round((scoreObtained / totalPossibleMarks) * 100);
+    const pointsPerQuestion = exam.total_marks / (totalQuestions || 1);
+    const scoreObtained = Math.round(correctCount * pointsPerQuestion);
+    const percentage = Math.round((scoreObtained / exam.total_marks) * 100);
 
     const studentEmail = currentUser?.email || 'student@smartedu.rw';
     const studentName = currentUser?.name || currentUser?.full_name || 'Student';
@@ -1142,11 +1062,13 @@ window.submitStudentExam = async function(examId) {
     if (subError) {
         alert("Error submitting exam: " + subError.message);
     } else {
+        // Display the marking guide directly inside the modal
         window.renderMarkingGuideInModal(exam, studentAnswers, scoreObtained, percentage);
         if (typeof renderStudentDashboard === 'function') renderStudentDashboard();
     }
 };
-// Function to render Marking Guide in Modal (Upgraded for JSON & AI Exams)
+
+// Function to render Marking Guide in Modal
 window.renderMarkingGuideInModal = function(exam, studentAnswers, scoreObtained, percentage) {
     const title = document.getElementById('exam-modal-title');
     const subtitle = document.getElementById('exam-modal-subtitle');
@@ -1158,51 +1080,53 @@ window.renderMarkingGuideInModal = function(exam, studentAnswers, scoreObtained,
     const isPassed = percentage >= 50;
 
     title.innerText = `Marking Guide: ${exam.title}`;
-    subtitle.innerText = `Score: ${scoreObtained} / ${exam.total_marks || 100} (${percentage}%) - ${isPassed ? 'PASSED 🎉' : 'NEEDS IMPROVEMENT ⚠️'}`;
+    subtitle.innerText = `Score: ${scoreObtained} / ${exam.total_marks} (${percentage}%) - ${isPassed ? 'PASSED 🎉' : 'NEEDS IMPROVEMENT ⚠️'}`;
 
-    // Safely parse questions whether stored as JSON array or raw text string
-    let questionsList = [];
-    try {
-        questionsList = typeof exam.questions === 'string' ? JSON.parse(exam.questions) : exam.questions;
-    } catch (e) {
-        questionsList = (exam.questions || '').split('\n').filter(l => l.trim() !== '').map((line, idx) => ({
-            id: idx,
-            question: line.includes('[') ? line.split('[')[0].trim() : (line.includes('{') ? line.replace(/\{([^}]+)\}/g, '_____') : line),
-            type: line.includes('[') ? 'mcq' : 'short-answer',
-            options: line.includes('[') ? line.substring(line.indexOf('[') + 1, line.indexOf(']')).split('|').map(o => o.replace('*', '').trim()) : [],
-            answer: line.includes('[') ? (line.substring(line.indexOf('[') + 1, line.indexOf(']')).split('|').find(o => o.includes('*')) || '').replace('*', '').trim() : (line.includes('{') ? (line.match(/\{([^}]+)\}/) || [])[1] : '')
-        }));
-    }
+    const lines = exam.questions.split('\n').filter(l => l.trim() !== '');
 
     let html = `
         <div class="space-y-4">
-            <div class="p-4 rounded-xl text-center font-bold ${isPassed ? 'bg-emerald-950/65 text-emerald-300 border border-emerald-800' : 'bg-rose-950/65 text-rose-300 border border-rose-800'}">
-                <p class="text-sm">Exam Submitted & Evaluated Successfully!</p>
-                <p class="text-xs font-normal mt-1 text-slate-300">Below is your question-by-question review and correct answer key.</p>
+            <div class="p-4 rounded-xl text-center font-bold ${isPassed ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800' : 'bg-rose-950/60 text-rose-300 border border-rose-800'}">
+                <p class="text-sm">Exam Submitted Successfully!</p>
+                <p class="text-xs font-normal mt-1 text-slate-300">Below is the question-by-question breakdown and correct answers.</p>
             </div>
     `;
 
-    questionsList.forEach((q, idx) => {
+    lines.forEach((line, idx) => {
+        let qText = "";
+        let expectedAnswer = "";
+        let rawOptions = [];
         const studentAns = studentAnswers[`q_${idx}`] || "No Answer";
-        const expectedAnswer = (q.answer || "").trim();
-        
-        // Lenient comparison check
-        const isCorrect = String(studentAns).trim().toLowerCase() === String(expectedAnswer).toLowerCase();
+
+        if (line.includes('[') && line.includes(']')) {
+            qText = line.split('[')[0].trim();
+            rawOptions = line.substring(line.indexOf('[') + 1, line.indexOf(']')).split('|');
+            const correctOpt = rawOptions.find(o => o.includes('*'));
+            if (correctOpt) expectedAnswer = correctOpt.replace('*', '').trim();
+        } else if (line.includes('{') && line.includes('}')) {
+            qText = line.replace(/\{([^}]+)\}/g, '_____');
+            const match = line.match(/\{([^}]+)\}/);
+            if (match) expectedAnswer = match[1].trim();
+        } else {
+            qText = line;
+        }
+
+        const isCorrect = String(studentAns).trim().toLowerCase() === String(expectedAnswer).trim().toLowerCase();
 
         html += `
             <div class="bg-slate-950 p-4 rounded-xl border ${isCorrect ? 'border-emerald-800/60' : 'border-rose-800/60'} space-y-2">
                 <div class="flex justify-between items-start gap-2">
-                    <p class="text-xs font-bold text-white">Q${idx + 1}: ${q.question || q}</p>
+                    <p class="text-xs font-bold text-white">Q${idx + 1}: ${qText}</p>
                     <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${isCorrect ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-rose-950 text-rose-300 border border-rose-800'}">
                         ${isCorrect ? '✓ Correct' : '✗ Incorrect'}
                     </span>
                 </div>
 
-                ${q.type === 'mcq' && q.options && q.options.length > 0 ? `
+                ${rawOptions.length > 0 ? `
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2">
-                        ${q.options.map(opt => {
-                            const cleanOpt = typeof opt === 'string' ? opt.replace('*', '').trim() : opt;
-                            const isSelected = cleanOpt.toLowerCase() === String(studentAns).toLowerCase();
+                        ${rawOptions.map(opt => {
+                            const cleanOpt = opt.replace('*', '').trim();
+                            const isSelected = cleanOpt.toLowerCase() === studentAns.toLowerCase();
                             const isRight = cleanOpt.toLowerCase() === expectedAnswer.toLowerCase();
 
                             let cardStyle = "bg-slate-900 border-slate-800 text-slate-400";
@@ -1233,31 +1157,9 @@ window.renderMarkingGuideInModal = function(exam, studentAnswers, scoreObtained,
         <button onclick="window.closeExamModal()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-lg">Done Reviewing</button>
     `;
 };
-// View Student Marking Guide anytime from Student Dashboard (Upgraded)
-window.viewStudentMarkingGuide = async function(examId) {
-    // Show loading indicator or open modal immediately
-    const modal = document.getElementById('exam-modal');
-    const title = document.getElementById('exam-modal-title');
-    const subtitle = document.getElementById('exam-modal-subtitle');
-    const body = document.getElementById('exam-modal-body');
-    const footer = document.getElementById('exam-modal-footer');
 
-    if (!modal) return;
-
-    modal.classList.remove('hidden');
-    if (title) title.innerText = "Loading Marking Guide...";
-    if (subtitle) subtitle.innerText = "Please wait while we retrieve your results.";
-    if (body) body.innerHTML = `
-        <div class="flex flex-col items-center justify-center p-8 space-y-3">
-            <svg class="animate-spin h-6 w-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12Here is the polished and fully compatible version of your **`viewStudentMarkingGuide`** function. It correctly queries the student's previous submission from Supabase, parses their saved answers safely, and opens the modal to display their detailed grading breakdown and score review at any time from their dashboard:
-
-```javascript
 // View Student Marking Guide anytime from Student Dashboard
 window.viewStudentMarkingGuide = async function(examId) {
-    const studentEmail = currentUser?.email || 'student@smartedu.rw';
-
     const { data: exam, error: examErr } = await supabaseClient
         .from('exams')
         .select('*')
@@ -1268,52 +1170,27 @@ window.viewStudentMarkingGuide = async function(examId) {
         .from('submissions')
         .select('*')
         .eq('exam_id', examId)
-        .eq('student_email', studentEmail)
+        .eq('student_email', currentUser?.email)
         .single();
 
     if (examErr || subErr || !exam || !sub) {
-        alert("Could not retrieve your submission or marking guide. Please check if you have completed this exam.");
+        alert("Could not retrieve marking guide.");
         return;
     }
 
     let parsedAnswers = {};
     try {
         parsedAnswers = typeof sub.answers === 'string' ? JSON.parse(sub.answers) : (sub.answers || {});
-    } catch (e) {
-        console.error("Error parsing student answers JSON:", e);
+    } catch(e) {
         parsedAnswers = {};
     }
 
     const modal = document.getElementById('exam-modal');
-    if (modal) {
-        modal.classList.remove('hidden');
-    }
+    if (modal) modal.classList.remove('hidden');
 
-    // Reuse your robust marking guide renderer
     window.renderMarkingGuideInModal(exam, parsedAnswers, sub.score_obtained, sub.percentage);
 };
 
-// Teacher View Exam Results Modal (Upgraded & Polished)
-window.viewExamResults = async function(examId) {
-    const modal = document.getElementById('exam-modal');
-    const title = document.getElementById('exam-modal-title');
-    const subtitle = document.getElementById('exam-modal-subtitle');
-    const body = document.getElementById('exam-modal-body');
-    const footer = document.getElementById('exam-modal-footer');
-
-    if (!modal) return;
-
-    // Show loading state immediately
-    modal.classList.remove('hidden');
-    if (title) title.innerText = "Loading Exam Results...";
-    if (subtitle) subtitle.innerText = "Please wait while we fetch student submissions.";
-    if (body) body.innerHTML = `
-        <div class="flex flex-col items-center justify-center p-8 space-y-3">
-            <svg class="animate-spin h-6 w-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12hHere is the clean, polished code for your **`viewExamResults`** function. It retrieves all student submissions for a specific exam from Supabase, orders them from highest to lowest score, and displays them in a sleek, responsive table inside the modal with pass/fail badges:
-
-```javascript
 // Teacher View Exam Results Modal
 window.viewExamResults = async function(examId) {
     const modal = document.getElementById('exam-modal');
@@ -1324,7 +1201,6 @@ window.viewExamResults = async function(examId) {
 
     if (!modal) return;
 
-    // Fetch exam details
     const { data: exam, error: examError } = await supabaseClient
         .from('exams')
         .select('*')
@@ -1336,7 +1212,6 @@ window.viewExamResults = async function(examId) {
         return;
     }
 
-    // Fetch all student submissions for this exam, sorted by highest score
     const { data: submissions, error: subError } = await supabaseClient
         .from('submissions')
         .select('*')
@@ -1344,7 +1219,7 @@ window.viewExamResults = async function(examId) {
         .order('score_obtained', { ascending: false });
 
     title.innerText = `Exam Results: ${exam.title}`;
-    subtitle.innerText = `Total Marks: ${exam.total_marks || 100} | Total Submissions: ${submissions ? submissions.length : 0}`;
+    subtitle.innerText = `Total Marks: ${exam.total_marks} | Total Submissions: ${submissions ? submissions.length : 0}`;
 
     if (subError || !submissions || submissions.length === 0) {
         body.innerHTML = `
@@ -1370,7 +1245,7 @@ window.viewExamResults = async function(examId) {
                             <tr class="hover:bg-slate-950/50 transition">
                                 <td class="py-3 px-3 font-bold text-white">${sub.student_name || 'Student'}</td>
                                 <td class="py-3 px-3 text-slate-400 font-mono text-[11px]">${sub.student_email}</td>
-                                <td class="py-3 px-3 text-center font-mono font-bold text-indigo-300">${sub.score_obtained} /${exam.total_marks || 100}</td>
+                                <td class="py-3 px-3 text-center font-mono font-bold text-indigo-300">${sub.score_obtained} /${exam.total_marks}</td>
                                 <td class="py-3 px-3 text-center">
                                     <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
                                         sub.percentage >= 50 
@@ -2513,79 +2388,4 @@ async function renderOfficialReports() {
         console.error('Error fetching Supabase report metrics:', err);
         container.innerHTML = `<p class="text-red-400 text-center py-6">Error loading report data: ${err.message}</p>`;
     }
-}
-/**
- * Processes the uploaded file from the AI Exam Generator card and calls Gemini
- */
-async function handleAIGenerateExam() {
-    const fileInput = document.getElementById('ai-exam-file');
-    const examTitleInput = document.getElementById('ai-exam-title');
-    const statusBox = document.getElementById('ai-status-box');
-    const generateBtn = document.getElementById('ai-generate-btn');
-
-    if (!fileInput.files || fileInput.files.length === 0) {
-        alert('Please select a document file first.');
-        return;
-    }
-
-    const file = fileInput.files[0];
-    const examTitle = examTitleInput.value.trim() || file.name.replace(/\.[^/.]+$/, "");
-
-    // Show processing indicator
-    statusBox.classList.remove('hidden');
-    statusBox.textContent = `Reading "${file.name}" and generating exam...`;
-    generateBtn.disabled = true;
-
-    try {
-        // Read file contents as text
-        const textContent = await readFileAsText(file);
-
-        // Construct your prompt for Gemini to structure PCB/subject questions
-        const prompt = `
-        You are an expert curriculum assistant. Analyze the text below for an exam titled "${examTitle}".
-        Extract and format questions into a clean JSON array format containing:
-        - question_text
-        - options (if multiple choice)
-        - correct_answer
-        
-        Ensure any math expressions or scientific equations are properly represented.
-        
-        Document Content:
-        ${textContent}
-        `;
-
-        // Call your Gemini integration here (using your existing API setup)
-        // const aiResult = await callGeminiAPI(prompt);
-
-        // Simulate success for now until backend call is plugged in
-        setTimeout(() => {
-            statusBox.textContent = `Success! "${examTitle}" questions generated.`;
-            statusBox.classList.remove('bg-indigo-950/45', 'border-indigo-900/50', 'text-indigo-300');
-            statusBox.classList.add('bg-emerald-950/40', 'border-emerald-900/50', 'text-emerald-300');
-            
-            generateBtn.disabled = false;
-            
-            // Hide status after a few seconds
-            setTimeout(() => {
-                statusBox.classList.add('hidden');
-                statusBox.classList.remove('bg-emerald-950/40', 'border-emerald-900/50', 'text-emerald-300');
-                statusBox.classList.add('bg-indigo-950/45', 'border-indigo-900/50', 'text-indigo-300');
-            }, 4000);
-        }, 1500);
-
-    } catch (err) {
-        console.error(err);
-        statusBox.textContent = "Error processing document. Please try again.";
-        generateBtn.disabled = false;
-    }
-}
-
-// Helper to read local files as text
-function readFileAsText(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = (e) => reject(e);
-        reader.readAsText(file);
-    });
 }
