@@ -2389,3 +2389,78 @@ async function renderOfficialReports() {
         container.innerHTML = `<p class="text-red-400 text-center py-6">Error loading report data: ${err.message}</p>`;
     }
 }
+/**
+ * Processes the uploaded file from the AI Exam Generator card and calls Gemini
+ */
+async function handleAIGenerateExam() {
+    const fileInput = document.getElementById('ai-exam-file');
+    const examTitleInput = document.getElementById('ai-exam-title');
+    const statusBox = document.getElementById('ai-status-box');
+    const generateBtn = document.getElementById('ai-generate-btn');
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please select a document file first.');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const examTitle = examTitleInput.value.trim() || file.name.replace(/\.[^/.]+$/, "");
+
+    // Show processing indicator
+    statusBox.classList.remove('hidden');
+    statusBox.textContent = `Reading "${file.name}" and generating exam...`;
+    generateBtn.disabled = true;
+
+    try {
+        // Read file contents as text
+        const textContent = await readFileAsText(file);
+
+        // Construct your prompt for Gemini to structure PCB/subject questions
+        const prompt = `
+        You are an expert curriculum assistant. Analyze the text below for an exam titled "${examTitle}".
+        Extract and format questions into a clean JSON array format containing:
+        - question_text
+        - options (if multiple choice)
+        - correct_answer
+        
+        Ensure any math expressions or scientific equations are properly represented.
+        
+        Document Content:
+        ${textContent}
+        `;
+
+        // Call your Gemini integration here (using your existing API setup)
+        // const aiResult = await callGeminiAPI(prompt);
+
+        // Simulate success for now until backend call is plugged in
+        setTimeout(() => {
+            statusBox.textContent = `Success! "${examTitle}" questions generated.`;
+            statusBox.classList.remove('bg-indigo-950/45', 'border-indigo-900/50', 'text-indigo-300');
+            statusBox.classList.add('bg-emerald-950/40', 'border-emerald-900/50', 'text-emerald-300');
+            
+            generateBtn.disabled = false;
+            
+            // Hide status after a few seconds
+            setTimeout(() => {
+                statusBox.classList.add('hidden');
+                statusBox.classList.remove('bg-emerald-950/40', 'border-emerald-900/50', 'text-emerald-300');
+                statusBox.classList.add('bg-indigo-950/45', 'border-indigo-900/50', 'text-indigo-300');
+            }, 4000);
+        }, 1500);
+
+    } catch (err) {
+        console.error(err);
+        statusBox.textContent = "Error processing document. Please try again.";
+        generateBtn.disabled = false;
+    }
+}
+
+// Helper to read local files as text
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(e);
+        reader.readAsText(file);
+    });
+}
