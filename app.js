@@ -2431,21 +2431,18 @@ async function handleAIGenerateExam() {
         alert("Error generating exam. Check your API key or console for details.");
     }
 }
-
 /**
  * 2. Helper implementation of callGeminiAPI using Google's Gemini Flash endpoint
  */
 async function callGeminiAPI(promptText, apiKey) {
-    async function callGeminiAPI(promptText, apiKey) {
     const modelName = 'gemini-2.0-flash';
-    // 1. Remove ?key=${apiKey} from the URL endpoint
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
 
     const response = await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey  // 2. Pass your AQ. key securely here
+            'x-goog-api-key': apiKey
         },
         body: JSON.stringify({
             contents: [{
@@ -2453,6 +2450,7 @@ async function callGeminiAPI(promptText, apiKey) {
             }]
         })
     });
+
     if (!response.ok) {
         const errorText = await response.text();
         console.error("Gemini API Error details:", errorText);
