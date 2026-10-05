@@ -2571,7 +2571,41 @@ async function handleAIGenerateExam() {
         generateBtn.disabled = false;
     }
 }
+/**
+ * Real implementation of callGeminiAPI using Google's Gemini Flash endpoint
+ */
+async function callGeminiAPI(promptText) {
+    // Replace with your actual Gemini API key
+    const apiKey = "YOUR_GEMINI_API_KEY"; 
+    
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            contents: [{
+                parts: [{ text: promptText }]
+            }]
+        })
+    });
 
+    if (!response.ok) {
+        throw new Error(`Gemini API Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    // Extract the text content returned by Gemini
+    const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!textResult) {
+        throw new Error("No response received from Gemini API.");
+    }
+    
+    return textResult;
+}
 /**
  * Helper reader function for local files
  */
