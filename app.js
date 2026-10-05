@@ -2391,7 +2391,7 @@ async function renderOfficialReports() {
 }
 /**
  * AI Exam Generator Handler
- * Reads an uploaded file, sends it to Gemini via API, and saves the output to Supabase.
+ * Reads an uploaded file (.txt, .docx, .pdf text), sends it to Gemini, and saves the output to Supabase.
  */
 async function handleAIGenerateExam() {
     const fileInput = document.getElementById('ai-exam-file');
@@ -2404,10 +2404,10 @@ async function handleAIGenerateExam() {
         return;
     }
 
-    // Check if API key is stored in browser, otherwise prompt for it once
+    // Securely check or prompt for your AI Studio API key (starts with AIzaSy...)
     let apiKey = localStorage.getItem('gemini_api_key');
     if (!apiKey) {
-        apiKey = prompt("Please enter your Google Gemini API Key:");
+        apiKey = prompt("Please enter your Google Gemini API Key (starts with AIzaSy):");
         if (!apiKey) return;
         localStorage.setItem('gemini_api_key', apiKey.trim());
     }
@@ -2433,7 +2433,7 @@ async function handleAIGenerateExam() {
 
         // 2. Build the prompt instructing Gemini to format content as JSON
         const prompt = `
-        You are an expert Rwandan curriculum assistant. 
+        You are an expert Rwandan primary/secondary curriculum assistant. 
         Analyze the following text for the exam titled "${examTitle}".
         Extract and convert the contents into a clean JSON array of exam questions.
         Ensure all mathematical expressions, physics formulas, and chemical equations use proper formatting.
@@ -2453,10 +2453,10 @@ async function handleAIGenerateExam() {
         ${textContent}
         `;
 
-        // 3. Call Gemini API
+        // 3. Call the Gemini API
         const rawAiOutput = await callGeminiAPI(prompt, apiKey);
         
-        // Clean up markdown code blocks if Gemini wraps them in ```json ... ```
+        // Clean up markdown code blocks if Gemini returns them wrapped in ```json ... ```
         const cleanedJSON = rawAiOutput.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsedQuestions = JSON.parse(cleanedJSON);
 
@@ -2484,11 +2484,12 @@ async function handleAIGenerateExam() {
         fileInput.value = '';
         examTitleInput.value = '';
 
-        // Refresh teacher dashboard cards
+        // Refresh teacher dashboard cards so the new exam button shows up instantly
         if (typeof renderTeacherDashboard === 'function') {
             renderTeacherDashboard();
         }
 
+        // Hide status after 4 seconds
         setTimeout(() => {
             statusBox.classList.add('hidden');
             statusBox.classList.remove('bg-emerald-950/40', 'border-emerald-900/50', 'text-emerald-300');
@@ -2521,7 +2522,9 @@ async function callGeminiAPI(promptText, apiKey) {
     });
 
     if (!response.ok) {
-        throw new Error(`Gemini API Error: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error("Gemini API Error details:", errorText);
+        throw new Error(`Gemini API Error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
