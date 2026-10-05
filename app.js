@@ -2389,63 +2389,53 @@ async function renderOfficialReports() {
         container.innerHTML = `<p class="text-red-400 text-center py-6">Error loading report data: ${err.message}</p>`;
     }
 }
-// 1. Define the missing function that your HTML button is looking for
+/**
+ * 1. Main handler triggered by the "Generate AI Exam" button
+ */
 async function handleAIGenerateExam() {
     console.log("Generate AI Exam button clicked.");
     
-    // Replace with your actual API key or fetch it from an input field
-    const apiKey = "YOUR_GEMINI_API_KEY"; 
-    const promptText = "Generate a multiple-choice exam based on the uploaded notes.";
+    // Get API key dynamically from the input field
+    const apiKeyInput = document.getElementById('geminiApiKeyInput');
+    const apiKey = apiKeyInput ? apiKeyInput.value.trim() : "";
+    
+    // Check if the user entered an API key
+    if (!apiKey) {
+        alert("Please enter your Gemini API key in the field above first!");
+        if (apiKeyInput) apiKeyInput.focus();
+        return;
+    }
+    
+    // Get the exam title if provided
+    const examTitleInput = document.getElementById('ai-exam-title');
+    const examTitle = examTitleInput ? examTitleInput.value.trim() : "Exam Quiz";
+    
+    const promptText = `Generate a comprehensive multi-question exam titled "${examTitle}" based on school curriculum notes.`;
+    
+    // Show loading status box if it exists in your HTML
+    const statusBox = document.getElementById('ai-status-box');
+    if (statusBox) statusBox.classList.remove('hidden');
     
     try {
-        // Call your Gemini API function
+        // Call the Gemini API function
         const result = await callGeminiAPI(promptText, apiKey);
         console.log("Generated Exam:", result);
         
-        // TODO: Add code here to display the result on your portal UI
-        alert("Exam generated successfully! Check the console for output.");
+        if (statusBox) statusBox.classList.add('hidden');
+        alert("Exam generated successfully! Check your console for output.");
+        
+        // TODO: Render the generated exam text onto your portal UI here
     } catch (error) {
+        if (statusBox) statusBox.classList.add('hidden');
         console.error("Exam generation failed:", error);
-        alert("Error generating exam. See console for details.");
+        alert("Error generating exam. Check your API key or console for details.");
     }
 }
 
-// 2. Your existing API function helper
-async function callGeminiAPI(promptText, apiKey) {
-    const modelName = 'gemini-2.0-flash'; 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-    
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            contents: [{
-                parts: [{ text: promptText }]
-            }]
-        })
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Gemini API Error details:", errorText);
-        throw new Error(`Gemini API Error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!textResult) {
-        throw new Error("No response received from Gemini API.");
-    }
-    
-    return textResult;
-}
 /**
- * Real implementation of callGeminiAPI using Google's Gemini Flash endpoint
+ * 2. Helper implementation of callGeminiAPI using Google's Gemini Flash endpoint
  */
 async function callGeminiAPI(promptText, apiKey) {
-    // Ensure you use the exact valid model name string for your endpoint (e.g., gemini-2.0-flash)
     const modelName = 'gemini-2.0-flash'; 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
     
