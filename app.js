@@ -2390,83 +2390,8 @@ async function renderOfficialReports() {
     }
 }
 /**
- * Processes the uploaded file from the AI Exam Generator card and calls Gemini
- */
-async function handleAIGenerateExam() {
-    const fileInput = document.getElementById('ai-exam-file');
-    const examTitleInput = document.getElementById('ai-exam-title');
-    const statusBox = document.getElementById('ai-status-box');
-    const generateBtn = document.getElementById('ai-generate-btn');
-
-    if (!fileInput.files || fileInput.files.length === 0) {
-        alert('Please select a document file first.');
-        return;
-    }
-
-    const file = fileInput.files[0];
-    const examTitle = examTitleInput.value.trim() || file.name.replace(/\.[^/.]+$/, "");
-
-    // Show processing indicator
-    statusBox.classList.remove('hidden');
-    statusBox.textContent = `Reading "${file.name}" and generating exam...`;
-    generateBtn.disabled = true;
-
-    try {
-        // Read file contents as text
-        const textContent = await readFileAsText(file);
-
-        // Construct your prompt for Gemini to structure PCB/subject questions
-        const prompt = `
-        You are an expert curriculum assistant. Analyze the text below for an exam titled "${examTitle}".
-        Extract and format questions into a clean JSON array format containing:
-        - question_text
-        - options (if multiple choice)
-        - correct_answer
-        
-        Ensure any math expressions or scientific equations are properly represented.
-        
-        Document Content:
-        ${textContent}
-        `;
-
-        // Call your Gemini integration here (using your existing API setup)
-        // const aiResult = await callGeminiAPI(prompt);
-
-        // Simulate success for now until backend call is plugged in
-        setTimeout(() => {
-            statusBox.textContent = `Success! "${examTitle}" questions generated.`;
-            statusBox.classList.remove('bg-indigo-950/45', 'border-indigo-900/50', 'text-indigo-300');
-            statusBox.classList.add('bg-emerald-950/40', 'border-emerald-900/50', 'text-emerald-300');
-            
-            generateBtn.disabled = false;
-            
-            // Hide status after a few seconds
-            setTimeout(() => {
-                statusBox.classList.add('hidden');
-                statusBox.classList.remove('bg-emerald-950/40', 'border-emerald-900/50', 'text-emerald-300');
-                statusBox.classList.add('bg-indigo-950/45', 'border-indigo-900/50', 'text-indigo-300');
-            }, 4000);
-        }, 1500);
-
-    } catch (err) {
-        console.error(err);
-        statusBox.textContent = "Error processing document. Please try again.";
-        generateBtn.disabled = false;
-    }
-}
-
-// Helper to read local files as text
-function readFileAsText(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = (e) => reject(e);
-        reader.readAsText(file);
-    });
-}
-/**
  * AI Exam Generator Handler
- * Reads an uploaded file (.txt, .docx, .pdf text), sends it to Gemini, and saves the output to Supabase.
+ * Reads an uploaded file, sends it to Gemini via API, and saves the output to Supabase.
  */
 async function handleAIGenerateExam() {
     const fileInput = document.getElementById('ai-exam-file');
@@ -2477,6 +2402,14 @@ async function handleAIGenerateExam() {
     if (!fileInput.files || fileInput.files.length === 0) {
         alert('Please select a document file (.pdf, .doc, .docx, .txt) first.');
         return;
+    }
+
+    // Check if API key is stored in browser, otherwise prompt for it once
+    let apiKey = localStorage.getItem('gemini_api_key');
+    if (!apiKey) {
+        apiKey = prompt("Please enter your Google Gemini API Key:");
+        if (!apiKey) return;
+        localStorage.setItem('gemini_api_key', apiKey.trim());
     }
 
     const file = fileInput.files[0];
@@ -2498,9 +2431,9 @@ async function handleAIGenerateExam() {
         // 1. Read the text content from the file
         const textContent = await readFileAsText(file);
 
-        // 2. Build the prompt instructing Gemini to format PCB/subject content as JSON
+        // 2. Build the prompt instructing Gemini to format content as JSON
         const prompt = `
-        You are an expert Rwandan primary/secondary curriculum assistant. 
+        You are an expert Rwandan curriculum assistant. 
         Analyze the following text for the exam titled "${examTitle}".
         Extract and convert the contents into a clean JSON array of exam questions.
         Ensure all mathematical expressions, physics formulas, and chemical equations use proper formatting.
@@ -2520,16 +2453,14 @@ async function handleAIGenerateExam() {
         ${textContent}
         `;
 
-        // 3. Call your Gemini API implementation
-        // (Replace this line with your actual API endpoint or SDK call configuration)
-        const rawAiOutput = await callGeminiAPI(prompt);
+        // 3. Call Gemini API
+        const rawAiOutput = await callGeminiAPI(prompt, apiKey);
         
-        // Clean up markdown code blocks if Gemini returns them wrapper in ```json ... ```
+        // Clean up markdown code blocks if Gemini wraps them in ```json ... ```
         const cleanedJSON = rawAiOutput.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsedQuestions = JSON.parse(cleanedJSON);
 
         // 4. Save the generated exam directly to your Supabase 'exams' table
-        // We link it to the teacher's email and a default class code or let them pick one later
         const { data, error } = await supabaseClient
             .from('exams')
             .insert([
@@ -2538,7 +2469,7 @@ async function handleAIGenerateExam() {
                     exam_title: examTitle,
                     teacher_email: currentUser.email,
                     questions: parsedQuestions,
-                    class_code: currentUser.default_class_code || 'GENERAL' // Adjust if you want to map to a specific class code selector
+                    class_code: currentUser.default_class_code || 'GENERAL'
                 }
             ]);
 
@@ -2553,12 +2484,11 @@ async function handleAIGenerateExam() {
         fileInput.value = '';
         examTitleInput.value = '';
 
-        // Refresh the teacher dashboard cards so the new exam button shows up instantly!
+        // Refresh teacher dashboard cards
         if (typeof renderTeacherDashboard === 'function') {
             renderTeacherDashboard();
         }
 
-        // Hide status after 4 seconds
         setTimeout(() => {
             statusBox.classList.add('hidden');
             statusBox.classList.remove('bg-emerald-950/40', 'border-emerald-900/50', 'text-emerald-300');
@@ -2571,13 +2501,11 @@ async function handleAIGenerateExam() {
         generateBtn.disabled = false;
     }
 }
+
 /**
  * Real implementation of callGeminiAPI using Google's Gemini Flash endpoint
  */
-async function callGeminiAPI(promptText) {
-    // Replace with your actual Gemini API key
-    const apiKey = "YOUR_GEMINI_API_KEY"; 
-    
+async function callGeminiAPI(promptText, apiKey) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
@@ -2597,8 +2525,6 @@ async function callGeminiAPI(promptText) {
     }
 
     const data = await response.json();
-    
-    // Extract the text content returned by Gemini
     const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!textResult) {
         throw new Error("No response received from Gemini API.");
@@ -2606,6 +2532,7 @@ async function callGeminiAPI(promptText) {
     
     return textResult;
 }
+
 /**
  * Helper reader function for local files
  */
