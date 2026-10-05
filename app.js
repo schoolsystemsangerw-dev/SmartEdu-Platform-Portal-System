@@ -2389,6 +2389,58 @@ async function renderOfficialReports() {
         container.innerHTML = `<p class="text-red-400 text-center py-6">Error loading report data: ${err.message}</p>`;
     }
 }
+// 1. Define the missing function that your HTML button is looking for
+async function handleAIGenerateExam() {
+    console.log("Generate AI Exam button clicked.");
+    
+    // Replace with your actual API key or fetch it from an input field
+    const apiKey = "YOUR_GEMINI_API_KEY"; 
+    const promptText = "Generate a multiple-choice exam based on the uploaded notes.";
+    
+    try {
+        // Call your Gemini API function
+        const result = await callGeminiAPI(promptText, apiKey);
+        console.log("Generated Exam:", result);
+        
+        // TODO: Add code here to display the result on your portal UI
+        alert("Exam generated successfully! Check the console for output.");
+    } catch (error) {
+        console.error("Exam generation failed:", error);
+        alert("Error generating exam. See console for details.");
+    }
+}
+
+// 2. Your existing API function helper
+async function callGeminiAPI(promptText, apiKey) {
+    const modelName = 'gemini-2.0-flash'; 
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            contents: [{
+                parts: [{ text: promptText }]
+            }]
+        })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Gemini API Error details:", errorText);
+        throw new Error(`Gemini API Error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!textResult) {
+        throw new Error("No response received from Gemini API.");
+    }
+    
+    return textResult;
+}
 /**
  * Real implementation of callGeminiAPI using Google's Gemini Flash endpoint
  */
