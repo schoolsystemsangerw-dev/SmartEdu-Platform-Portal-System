@@ -2435,7 +2435,7 @@ async function handleAIGenerateExam() {
  * 2. Helper implementation of callGeminiAPI using Google's Gemini Flash endpoint
  */
 async function callGeminiAPI(promptText, apiKey) {
-    const modelName = 'gemini-2.0-flash';
+    const modelName = 'gemini-3.8-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
 
     const response = await fetch(url, {
