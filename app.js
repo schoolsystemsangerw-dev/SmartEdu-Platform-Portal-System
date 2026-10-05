@@ -2393,7 +2393,9 @@ async function renderOfficialReports() {
  * Real implementation of callGeminiAPI using Google's Gemini Flash endpoint
  */
 async function callGeminiAPI(promptText, apiKey) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
+    // Ensure you use the exact valid model name string for your endpoint (e.g., gemini-2.0-flash)
+    const modelName = 'gemini-2.0-flash'; 
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
         method: 'POST',
