@@ -2395,42 +2395,115 @@ async function renderOfficialReports() {
 async function handleAIGenerateExam() {
     console.log("Generate AI Exam button clicked.");
     
-    // Get API key dynamically from the input field
     const apiKeyInput = document.getElementById('geminiApiKeyInput');
     const apiKey = apiKeyInput ? apiKeyInput.value.trim() : "";
     
-    // Check if the user entered an API key
     if (!apiKey) {
-        alert("Please enter your Gemini API key in the field above first!");
+        alert("Please enter your API key in the field above first!");
         if (apiKeyInput) apiKeyInput.focus();
         return;
     }
     
-    // Get the exam title if provided
     const examTitleInput = document.getElementById('ai-exam-title');
     const examTitle = examTitleInput ? examTitleInput.value.trim() : "Exam Quiz";
     
-    const promptText = `Generate a comprehensive multi-question exam titled "${examTitle}" based on school curriculum notes.`;
+    // Extract text from the uploaded document file
+    const fileInput = document.getElementById('ai-exam-file');
+    const documentText = await extractTextFromFile(fileInput);
     
-    // Show loading status box if it exists in your HTML
+    const promptText = `Generate a comprehensive multi-question exam titled "${examTitle}" based on the following curriculum notes/document content:\n\n${documentText}`;
+    
     const statusBox = document.getElementById('ai-status-box');
     if (statusBox) statusBox.classList.remove('hidden');
     
     try {
-        // Call the Gemini API function
-        const result = await callGeminiAPI(promptText, apiKey);
+        let result;
+        if (apiKey.startsWith('sk-')) {
+            result = await callChatGPTAPI(promptText, apiKey);
+        } else {
+            result = await callGeminiAPI(promptText, apiKey);
+        }
+
         console.log("Generated Exam:", result);
         
         if (statusBox) statusBox.classList.add('hidden');
         alert("Exam generated successfully! Check your console for output.");
         
-        // TODO: Render the generated exam text onto your portal UI here
+        // TODO: Render output on your portal UI
     } catch (error) {
         if (statusBox) statusBox.classList.add('hidden');
         console.error("Exam generation failed:", error);
         alert("Error generating exam. Check your API key or console for details.");
     }
 }
+
+/**
+ * 2. Helper function to read text or Word documents
+ */
+async function extractTextFromFile(fileInput) {
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        return ""; // No file uploaded, return empty string
+    }
+
+    const file = fileInput.files[0];
+    const fileName = file.name.toLowerCase();
+
+    // Handle plain text files
+    if (fileName.endsWith('.txt')) {
+        return await file.text();
+    }
+
+    // Handle Word documents (.docx) using standard FileReader
+    if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+        const arrayBuffer = await file.arrayBuffer();
+        if (window.mammoth) {
+            const result = await window.mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+            return result.value;
+        } else {
+            return `[Uploaded Document: ${file.name}]`;
+        }
+    }
+
+    return `[Uploaded Document: ${file.name}]`;
+}
+
+/**
+ * 3. Gemini API Helper implementation
+ */
+async function callGeminiAPI(promptText, apiKey) {
+    const modelName = 'gemini-1.5-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            contents: [{
+                parts: [{ text: promptText }]
+            }]
+        })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Gemini API Error details:", errorText);
+        throw new Error(`Gemini API Error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!textResult) {
+        throw new Error("No response received from Gemini API.");
+    }
+    
+    return textResult;
+}
+
+/**
+ * 4. ChatGPT API Helper implementation (Optional fallback)
+ */
 async function callChatGPTAPI(promptText, apiKey) {
     const url = "https://api.openai.com/v1/chat/completions";
 
@@ -2441,10 +2514,8 @@ async function callChatGPTAPI(promptText, apiKey) {
             'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-            model: "gpt-4o-mini", // or "gpt-4o"
-            messages: [
-                { role: "user", content: promptText }
-            ]
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: promptText }]
         })
     });
 
