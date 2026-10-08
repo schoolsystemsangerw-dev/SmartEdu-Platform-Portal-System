@@ -2414,9 +2414,7 @@ async function handleAIGenerateExam() {
         console.log("Generated Exam:", result);
         
         if (statusBox) statusBox.classList.add('hidden');
-        
-        // Trigger the teacher preview & editor workflow instead of an alert
-        handleExamGeneratedSuccess(examTitle, result);
+        alert("Exam generated successfully! Check your console for output.");
         
     } catch (error) {
         if (statusBox) statusBox.classList.add('hidden');
@@ -2452,7 +2450,6 @@ async function extractTextFromFile(fileInput) {
 
     return `[Uploaded Document: ${file.name}]`;
 }
-
 /**
  * 3. Secure ChatGPT API Helper (Invokes your Supabase Edge Function)
  */
@@ -2478,71 +2475,4 @@ async function callChatGPTAPI(promptText) {
     }
 
     return textResult;
-}
-
-/**
- * 4. Teacher Review, Edit & Publish Workflow Handlers
- */
-function handleExamGeneratedSuccess(examTitle, rawQuestionsText) {
-    const previewContainer = document.getElementById('teacher-exam-preview-container');
-    if (!previewContainer) return;
-
-    // Show preview container
-    previewContainer.classList.remove('hidden');
-
-    // Populate editable fields
-    document.getElementById('preview-exam-title').value = examTitle || "Generated Assessment";
-    document.getElementById('preview-exam-content').value = rawQuestionsText;
-
-    // Populate target classes dropdown
-    populateTargetClassDropdown();
-
-    // Smooth scroll to the editor area
-    previewContainer.scrollIntoView({ behavior: 'smooth' });
-}
-
-function populateTargetClassDropdown() {
-    const classSelect = document.getElementById('target-class-select');
-    if (!classSelect) return;
-
-    // Clear existing options except default
-    classSelect.innerHTML = '<option value="">-- Select Enrolled Class --</option>';
-
-    // Assuming window.teacherClasses or your local store holds the loaded classes
-    const classesList = window.teacherClasses || [];
-    classesList.forEach(cls => {
-        const option = document.createElement('option');
-        option.value = cls.id || cls.code;
-        option.textContent = `${cls.name} (${cls.subject || 'General'})`;
-        classSelect.appendChild(option);
-    });
-}
-
-function publishExamToClass() {
-    const title = document.getElementById('preview-exam-title').value;
-    const content = document.getElementById('preview-exam-content').value;
-    const classId = document.getElementById('target-class-select').value;
-
-    if (!classId) {
-        alert("Please select a target class to publish this exam.");
-        return;
-    }
-
-    if (!content.trim()) {
-        alert("Exam content cannot be empty.");
-        return;
-    }
-
-    // Save or update exam implementation to your backend/Supabase database
-    console.log("Publishing Exam to Class:", { classId, title, content });
-    alert("Exam successfully published to class! Students can now access it from their portal.");
-    
-    // Hide preview container after successful publish
-    document.getElementById('teacher-exam-preview-container').classList.add('hidden');
-}
-
-function discardExamDraft() {
-    if (confirm("Are you sure you want to discard this exam draft?")) {
-        document.getElementById('teacher-exam-preview-container').classList.add('hidden');
-    }
 }
