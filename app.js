@@ -2431,36 +2431,33 @@ async function handleAIGenerateExam() {
         alert("Error generating exam. Check your API key or console for details.");
     }
 }
-
-/**
- * 2. Helper implementation of callGeminiAPI using Google's Gemini Flash endpoint
- */
-async function callGeminiAPI(promptText, apiKey) {
-    const modelName = 'gemini-1.5-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+async function callChatGPTAPI(promptText, apiKey) {
+    const url = "https://api.openai.com/v1/chat/completions";
 
     const response = await fetch(url, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-            contents: [{
-                parts: [{ text: promptText }]
-            }]
+            model: "gpt-4o-mini", // or "gpt-4o"
+            messages: [
+                { role: "user", content: promptText }
+            ]
         })
     });
 
     if (!response.ok) {
         const errorText = await response.text();
-        console.error("Gemini API Error details:", errorText);
-        throw new Error(`Gemini API Error: ${response.status} ${response.statusText}`);
+        console.error("ChatGPT API Error details:", errorText);
+        throw new Error(`ChatGPT API Error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const textResult = data.choices?.[0]?.message?.content;
     if (!textResult) {
-        throw new Error("No response received from Gemini API.");
+        throw new Error("No response received from ChatGPT API.");
     }
     
     return textResult;
