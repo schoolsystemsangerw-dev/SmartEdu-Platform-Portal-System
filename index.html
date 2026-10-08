@@ -357,6 +357,45 @@
         </div>
     </div>
 </div>
+                <!-- Student Active Classes List -->
+<div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6">
+    <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+        <i data-lucide="graduation-cap" class="text-indigo-400"></i> My Enrolled Classes
+    </h3>
+    <div id="student-classes-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Dynamic insertion from app.js -->
+    </div>
+</div>
+
+<!-- INSERT THE STUDENT EXAM VIEW RIGHT HERE -->
+<div id="student-exam-container" class="hidden mt-6 bg-slate-800/60 border border-slate-700 rounded-3xl p-6">
+    <h3 id="student-exam-title" class="text-base font-bold text-white mb-4">Exam Portal</h3>
+    
+    <!-- Student Name Input -->
+    <div class="mb-4">
+        <label class="block text-[11px] font-bold text-slate-400 mb-1">Your Full Name</label>
+        <input type="text" id="student-name-input" placeholder="e.g., Uwimana Marie" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white">
+    </div>
+
+    <!-- Dynamic Questions Form rendered here -->
+    <form id="student-exam-form" class="space-y-4">
+        <div id="questions-render-area" class="space-y-4">
+            <!-- Questions load dynamically here -->
+        </div>
+        
+        <button type="button" onclick="submitOnScreenExam()" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl text-xs transition shadow-lg">
+            Submit Exam for AI Grading
+        </button>
+    </form>
+
+    <!-- Student Score Result Box (Hidden until graded) -->
+    <div id="student-result-box" class="hidden mt-6 p-4 rounded-2xl bg-slate-900 border border-slate-700">
+        <h4 class="text-sm font-bold text-emerald-400 mb-2">Exam Results & Feedback</h4>
+        <p id="student-score-display" class="text-white text-xs font-bold mb-2"></p>
+        <p id="student-feedback-display" class="text-slate-300 text-xs italic mb-4"></p>
+        <div id="marking-guide-breakdown" class="space-y-2 text-xs text-slate-400"></div>
+    </div>
+</div>
             <!-- Right Column: Classes Cards Container -->
             <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4" id="teacher-classes-cards">
                 <!-- Rendered classes will automatically populate here -->
