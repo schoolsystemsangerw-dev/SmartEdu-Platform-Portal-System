@@ -2466,6 +2466,7 @@ async function extractTextFromFile(fileInput) {
 
     return `[Uploaded Document: ${file.name}]`;
 }
+
 /**
  * 3. Gemini API Helper implementation
  */
@@ -2588,7 +2589,7 @@ async function loadExamForStudent(examId) {
     document.getElementById('student-exam-container').scrollIntoView({ behavior: 'smooth' });
 }
 
-// Function to handle on-screen submission and AI grading
+// Function to handle on-screen submission and AI grading (Adapted for all educational levels)
 async function submitOnScreenExam() {
     const studentName = document.getElementById('student-name-input').value.trim();
     if (!studentName) {
@@ -2617,7 +2618,7 @@ async function submitOnScreenExam() {
         .single();
 
     const gradingPrompt = `
-    You are a fair, kind primary school teacher marking a student's exam taken on screen.
+    You are a fair, kind, and expert educator marking a student's exam taken on screen. This system serves all academic levels.
     Official Questions & Correct Answers:
     ${JSON.stringify(examRecord.questions_json)}
 
@@ -2625,7 +2626,7 @@ async function submitOnScreenExam() {
     ${JSON.stringify(studentAnswers)}
 
     Instructions:
-    - Grade like a human teacher. Forgive minor spelling, capitalization, or punctuation differences if the core concept is right.
+    - Grade like a human teacher with appropriate academic rigor. Forgive minor spelling, capitalization, or punctuation differences if the core concept is right.
     - Give a total score and max score.
     - Provide a question-by-question breakdown in the marking guide.
     - Write encouraging feedback.
