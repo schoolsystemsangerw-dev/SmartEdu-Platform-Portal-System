@@ -2533,3 +2533,173 @@ async function callChatGPTAPI(promptText, apiKey) {
     
     return textResult;
 }
+let currentLoadedExamId = null;
+let loadedExamQuestions = [];
+
+async function loadExamForStudent(examId) {
+    currentLoadedExamId = examId;
+    
+    // Fetch exam from Supabase
+    const { data: exam, error } = await supabaseClient
+        .from('exams')
+        .select('*')
+        .eq('id', examId)
+        .single();
+
+    if (error || !exam) {
+        alert("Could not load exam.");
+        return;
+    }
+
+    loadedExamQuestions = exam.questions_json;
+    
+    // Update UI title
+    document.getElementById('student-exam-title').innerText = `Exam: ${exam.title}`;
+    
+    // Render questions on screen
+    const renderArea = document.getElementById('questions-render-area');
+    renderArea.innerHTML = '';
+
+    loadedExamQuestions.forEach((q, index) => {
+        renderArea.innerHTML += `
+            <div class="p-4 bg-slate-900 border border-slate-700 rounded-2xl space-y-2">
+                <p class="text-xs font-bold text-white">Q${index + 1}: ${q.question} <span class="text-indigo-400 font-normal">(${q.marks} marks)</span></p>
+                <input type="text" id="answer-${q.id}" placeholder="Type your answer here..." class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white">
+            </div>
+        `;
+    });
+
+    // Show the container on screen
+    document.getElementById('student-exam-container').classList.remove('hidden');
+    document.getElementById('student-exam-container').scrollIntoView({ behavior: 'smooth' });
+}
+// Global variables for student exam portal (place at the top or bottom of app.js)
+let currentLoadedExamId = null;
+let loadedExamQuestions = [];
+
+// Function to fetch the exam and render questions on screen
+async function loadExamForStudent(examId) {
+    currentLoadedExamId = examId;
+    
+    // Fetch exam from Supabase
+    const { data: exam, error } = await supabaseClient
+        .from('exams')
+        .select('*')
+        .eq('id', examId)
+        .single();
+
+    if (error || !exam) {
+        alert("Could not load exam.");
+        return;
+    }
+
+    loadedExamQuestions = exam.questions_json;
+    
+    // Update UI title
+    document.getElementById('student-exam-title').innerText = `Exam: ${exam.title}`;
+    
+    // Render questions on screen
+    const renderArea = document.getElementById('questions-render-area');
+    renderArea.innerHTML = '';
+
+    loadedExamQuestions.forEach((q, index) => {
+        renderArea.innerHTML += `
+            <div class="p-4 bg-slate-900 border border-slate-700 rounded-2xl space-y-2">
+                <p class="text-xs font-bold text-white">Q${index + 1}: ${q.question} <span class="text-indigo-400 font-normal">(${q.marks} marks)</span></p>
+                <input type="text" id="answer-${q.id}" placeholder="Type your answer here..." class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white">
+            </div>
+        `;
+    });
+
+    // Show the container on screen
+    document.getElementById('student-exam-container').classList.remove('hidden');
+    document.getElementById('student-exam-container').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Function to handle on-screen submission and AI grading
+async function submitOnScreenExam() {
+    const studentName = document.getElementById('student-name-input').value.trim();
+    if (!studentName) {
+        alert("Please enter your name before submitting!");
+        document.getElementById('student-name-input').focus();
+        return;
+    }
+
+    // Collect answers directly from the on-screen inputs
+    const studentAnswers = loadedExamQuestions.map(q => {
+        const inputElem = document.getElementById(`answer-${q.id}`);
+        return {
+            questionId: q.id,
+            question: q.question,
+            answer: inputElem ? inputElem.value.trim() : ""
+        };
+    });
+
+    alert("Submitting exam... AI is grading your responses, please wait a moment.");
+
+    // Fetch correct answers for comparison
+    const { data: examRecord } = await supabaseClient
+        .from('exams')
+        .select('*')
+        .eq('id', currentLoadedExamId)
+        .single();
+
+    const gradingPrompt = `
+    You are a fair, kind primary school teacher marking a student's exam taken on screen.
+    Official Questions & Correct Answers:
+    ${JSON.stringify(examRecord.questions_json)}
+
+    Student's Submitted Answers:
+    ${JSON.stringify(studentAnswers)}
+
+    Instructions:
+    - Grade like a human teacher. Forgive minor spelling, capitalization, or punctuation differences if the core concept is right.
+    - Give a total score and max score.
+    - Provide a question-by-question breakdown in the marking guide.
+    - Write encouraging feedback.
+
+    Respond in valid JSON format only (no markdown):
+    {
+      "totalScore": 8,
+      "maxScore": 10,
+      "markingGuide": [
+        { "questionId": 1, "studentAnswer": "...", "correctAnswer": "...", "awardedMarks": 2, "maxMarks": 2, "comment": "Correct!" }
+      ],
+      "studentFeedback": "Wonderful effort! Your understanding of the topic is strong..."
+    }
+    `;
+
+    const apiKey = document.getElementById('geminiApiKeyInput').value.trim();
+    const rawGrading = await callGeminiAPI(gradingPrompt, apiKey);
+    const cleanJson = rawGrading.replace(/```json/g, '').replace(/```/g, '').trim();
+    const gradingResult = JSON.parse(cleanJson);
+
+    // Save submission to Supabase
+    await supabaseClient.from('exam_submissions').insert([{
+        exam_id: currentLoadedExamId,
+        student_name: studentName,
+        student_answers: studentAnswers,
+        ai_score: gradingResult.totalScore,
+        ai_feedback: gradingResult.studentFeedback,
+        marking_guide: gradingResult.markingGuide
+    }]);
+
+    // Display results instantly on screen for the student
+    document.getElementById('student-score-display').innerText = `Your Score: ${gradingResult.totalScore} / ${gradingResult.maxScore}`;
+    document.getElementById('student-feedback-display').innerText = `"${gradingResult.studentFeedback}"`;
+    
+    const guideArea = document.getElementById('marking-guide-breakdown');
+    guideArea.innerHTML = '<h5 class="font-bold text-white mb-1">Marking Guide Breakdown:</h5>';
+    
+    gradingResult.markingGuide.forEach((mg, idx) => {
+        guideArea.innerHTML += `
+            <div class="p-2 bg-slate-800 rounded-xl">
+                <p class="text-white">Q${idx + 1}: Awarded ${mg.awardedMarks}/${mg.maxMarks} marks</p>
+                <p class="text-slate-400">Your answer: "${mg.studentAnswer}" | Note: ${mg.comment}</p>
+            </div>
+        `;
+    });
+
+    document.getElementById('student-result-box').classList.remove('hidden');
+    document.getElementById('student-exam-form').classList.add('hidden'); // Hide form after submission
+}
