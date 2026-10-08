@@ -2408,14 +2408,14 @@ async function handleAIGenerateExam() {
     if (statusBox) statusBox.classList.remove('hidden');
     
     try {
-        // Calls your secure Supabase Edge Function (bypassing browser CORS and passing the API key)
+        // Calls your secure Supabase Edge Function with prompt and API key
         const result = await callChatGPTAPI(promptText);
 
         console.log("Generated Exam:", result);
         
         if (statusBox) statusBox.classList.add('hidden');
         
-        // Trigger teacher preview & edit mode instead of an alert
+        // Send generated exam directly to the teacher review & edit panel
         handleExamGeneratedSuccess(examTitle, result);
         
     } catch (error) {
@@ -2454,18 +2454,14 @@ async function extractTextFromFile(fileInput) {
 }
 
 /**
- * 3. Secure ChatGPT API Helper (Invokes your Supabase Edge Function with API Key)
+ * 3. Secure ChatGPT/Gemini API Helper (Invokes your Supabase Edge Function)
  */
 async function callChatGPTAPI(promptText) {
-    // Grab the API key from your UI password input field
     const apiKeyInput = document.getElementById('geminiApiKeyInput');
     const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
 
     const { data, error } = await supabaseClient.functions.invoke('generate-exam', {
-        body: { 
-            promptText, 
-            apiKey 
-        }
+        body: { promptText, apiKey }
     });
 
     if (error) {
@@ -2478,7 +2474,6 @@ async function callChatGPTAPI(promptText) {
         throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
     }
 
-    // Handles OpenAI or Gemini response mapping safely
     const textResult = data?.choices?.[0]?.message?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text;
     if (!textResult) {
         console.error("Unexpected response structure:", data);
@@ -2498,11 +2493,11 @@ function handleExamGeneratedSuccess(examTitle, rawQuestionsText) {
     // Show preview container
     previewContainer.classList.remove('hidden');
 
-    // Populate editable fields with AI generated output
+    // Populate editable fields for the teacher
     document.getElementById('preview-exam-title').value = examTitle || "Generated Assessment";
     document.getElementById('preview-exam-content').value = rawQuestionsText;
 
-    // Populate target classes dropdown
+    // Populate target classes dropdown so teacher can choose where to publish
     populateTargetClassDropdown();
 
     // Smooth scroll to the editor area
@@ -2551,7 +2546,7 @@ async function publishExamToClass() {
 
         if (error) throw error;
 
-        alert("Exam successfully published to class! Students can now access and take it.");
+        alert("Exam successfully published to class! Students can now access it from their portal.");
         document.getElementById('teacher-exam-preview-container').classList.add('hidden');
         
     } catch (err) {
