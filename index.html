@@ -325,40 +325,57 @@
                     </form>
                 </div>
 
-                <!-- EDIT/ADD HERE: AI Exam Generator Card -->
-                <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6 h-fit">
-                    <h3 class="text-base font-bold text-white mb-2 flex items-center gap-2">
-                        <span class="text-indigo-400">✨</span> AI Exam Generator
-                    </h3>
-                    <p class="text-slate-400 text-xs mb-4">Upload a document (PCB notes or past papers) to auto-generate questions.</p>
-                    
-                    <div class="space-y-3">
-                        <!-- API Key Input Field (Added to keep your repository safe from GitHub warnings) -->
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-400 mb-1">Gemini API Key</label>
-                            <input type="password" id="geminiApiKeyInput" placeholder="Paste your Gemini API Key here" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white">
-                        </div>
+               /**
+ * Main handler triggered by the "Generate AI Exam" button
+ */
+async function handleAIGenerateExam() {
+    console.log("Generate AI Exam button clicked.");
+    
+    // Get API key dynamically from the input field
+    const apiKeyInput = document.getElementById('geminiApiKeyInput');
+    const apiKey = apiKeyInput ? apiKeyInput.value.trim() : "";
+    
+    // Check if the user entered an API key
+    if (!apiKey) {
+        alert("Please enter your API key in the field above first!");
+        if (apiKeyInput) apiKeyInput.focus();
+        return;
+    }
+    
+    // Get the exam title if provided
+    const examTitleInput = document.getElementById('ai-exam-title');
+    const examTitle = examTitleInput ? examTitleInput.value.trim() : "Exam Quiz";
+    
+    const promptText = `Generate a comprehensive multi-question exam titled "${examTitle}" based on school curriculum notes.`;
+    
+    // Show loading status box
+    const statusBox = document.getElementById('ai-status-box');
+    if (statusBox) statusBox.classList.remove('hidden');
+    
+    try {
+        let result;
+        
+        // Auto-detect provider based on key prefix
+        if (apiKey.startsWith('sk-')) {
+            console.log("Detected OpenAI key. Using ChatGPT API...");
+            result = await callChatGPTAPI(promptText, apiKey);
+        } else {
+            console.log("Detected Google key. Using Gemini API...");
+            result = await callGeminiAPI(promptText, apiKey);
+        }
 
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-400 mb-1">Upload Document</label>
-                            <input type="file" id="ai-exam-file" accept=".pdf,.doc,.docx,.txt" class="w-full text-xs text-slate-400 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 file:cursor-pointer border border-slate-700 rounded-xl bg-slate-900 p-1.5">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-400 mb-1">Exam Title</label>
-                            <input type="text" id="ai-exam-title" placeholder="e.g., Physics Motion Quiz" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white">
-                        </div>
-                        <button type="button" onclick="handleAIGenerateExam()" id="ai-generate-btn" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">
-                            ✨ Generate AI Exam
-                        </button>
-                        
-                        <!-- Status message indicator -->
-                        <div id="ai-status-box" class="hidden p-3 rounded-xl bg-indigo-950/40 border border-indigo-900/50 text-indigo-300 text-[11px] text-center animate-pulse">
-                            Processing document...
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+        console.log("Generated Exam:", result);
+        
+        if (statusBox) statusBox.classList.add('hidden');
+        alert("Exam generated successfully! Check your console for output.");
+        
+        // TODO: Render the generated exam text onto your portal UI here
+    } catch (error) {
+        if (statusBox) statusBox.classList.add('hidden');
+        console.error("Exam generation failed:", error);
+        alert("Error generating exam. Check your API key or console for details.");
+    }
+}
             <!-- Right Column: Classes Cards Container -->
             <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4" id="teacher-classes-cards">
                 <!-- Rendered classes will automatically populate here -->
