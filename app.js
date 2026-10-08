@@ -2390,38 +2390,83 @@ async function renderOfficialReports() {
     }
 }
 /**
- * 3. Gemini API Helper implementation (Using x-goog-api-key header)
+ * 1. Main handler triggered by the "Generate AI Exam" button
  */
-async function callGeminiAPI(promptText, apiKey) {
-    const modelName = 'gemini-2.5-flash';
+async function handleAIGenerateExam() {
+    console.log("Generate AI Exam button clicked.");
     
-    // The correct endpoint without query parameters
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+    const examTitleInput = document.getElementById('ai-exam-title');
+    const examTitle = examTitleInput ? examTitleInput.value.trim() : "Exam Quiz";
+    
+    // Extract text from the uploaded document file
+    const fileInput = document.getElementById('ai-exam-file');
+    const documentText = await extractTextFromFile(fileInput);
+    
+    const promptText = `Generate a comprehensive multi-question exam titled "${examTitle}" based on the following curriculum notes/document content:\n\n${documentText}`;
+    
+    const statusBox = document.getElementById('ai-status-box');
+    if (statusBox) statusBox.classList.remove('hidden');
+    
+    try {
+        // Calls your secure Supabase Edge Function (bypassing browser CORS and hiding your API key)
+        const result = await callChatGPTAPI(promptText);
 
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey // Pass the key securely in the header
-        },
-        body: JSON.stringify({
-            contents: [{
-                parts: [{ text: promptText }]
-            }]
-        })
+        console.log("Generated Exam:", result);
+        
+        if (statusBox) statusBox.classList.add('hidden');
+        alert("Exam generated successfully! Check your console for output.");
+        
+    } catch (error) {
+        if (statusBox) statusBox.classList.add('hidden');
+        console.error("Exam generation failed:", error);
+        alert("Error generating exam. Check console for details.");
+    }
+}
+
+/**
+ * 2. Helper function to read text or Word documents
+ */
+async function extractTextFromFile(fileInput) {
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        return ""; 
+    }
+
+    const file = fileInput.files[0];
+    const fileName = file.name.toLowerCase();
+
+    if (fileName.endsWith('.txt')) {
+        return await file.text();
+    }
+
+    if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+        const arrayBuffer = await file.arrayBuffer();
+        if (window.mammoth) {
+            const result = await window.mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+            return result.value;
+        } else {
+            return `[Uploaded Document: ${file.name}]`;
+        }
+    }
+
+    return `[Uploaded Document: ${file.name}]`;
+}
+
+/**
+ * 3. Secure ChatGPT API Helper (Invokes your Supabase Edge Function)
+ */
+async function callChatGPTAPI(promptText) {
+    const { data, error } = await supabaseClient.functions.invoke('generate-exam', {
+        body: { promptText }
     });
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Gemini API Error details:", errorText);
-        throw new Error(`Gemini API Error: ${response.status} ${response.statusText}`);
+    if (error || data.error) {
+        throw new Error(error?.message || data.error);
     }
 
-    const data = await response.json();
-    const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const textResult = data.choices?.[0]?.message?.content;
     if (!textResult) {
-        throw new Error("No response received from Gemini API.");
+        throw new Error("No response received from OpenAI.");
     }
-    
+
     return textResult;
 }
