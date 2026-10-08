@@ -2408,13 +2408,15 @@ async function handleAIGenerateExam() {
     if (statusBox) statusBox.classList.remove('hidden');
     
     try {
-        // Calls your secure Supabase Edge Function (bypassing browser CORS and hiding your API key)
+        // Calls your secure Supabase Edge Function (bypassing browser CORS and passing the API key)
         const result = await callChatGPTAPI(promptText);
 
         console.log("Generated Exam:", result);
         
         if (statusBox) statusBox.classList.add('hidden');
-        alert("Exam generated successfully! Check your console for output.");
+        
+        // Trigger teacher preview & edit mode instead of an alert
+        handleExamGeneratedSuccess(examTitle, result);
         
     } catch (error) {
         if (statusBox) statusBox.classList.add('hidden');
@@ -2450,12 +2452,20 @@ async function extractTextFromFile(fileInput) {
 
     return `[Uploaded Document: ${file.name}]`;
 }
+
 /**
- * 3. Secure ChatGPT API Helper (Invokes your Supabase Edge Function)
+ * 3. Secure ChatGPT API Helper (Invokes your Supabase Edge Function with API Key)
  */
 async function callChatGPTAPI(promptText) {
+    // Grab the API key from your UI password input field
+    const apiKeyInput = document.getElementById('geminiApiKeyInput');
+    const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+
     const { data, error } = await supabaseClient.functions.invoke('generate-exam', {
-        body: { promptText }
+        body: { 
+            promptText, 
+            apiKey 
+        }
     });
 
     if (error) {
@@ -2464,15 +2474,94 @@ async function callChatGPTAPI(promptText) {
     }
 
     if (data && data.error) {
-        console.error("OpenAI API error returned from function:", data.error);
+        console.error("API error returned from function:", data.error);
         throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
     }
 
-    const textResult = data?.choices?.[0]?.message?.content;
+    // Handles OpenAI or Gemini response mapping safely
+    const textResult = data?.choices?.[0]?.message?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text;
     if (!textResult) {
         console.error("Unexpected response structure:", data);
-        throw new Error("No response content received from OpenAI.");
+        throw new Error("No response content received from AI.");
     }
 
     return textResult;
+}
+
+/**
+ * 4. Teacher Review, Edit & Publish Workflow Handlers
+ */
+function handleExamGeneratedSuccess(examTitle, rawQuestionsText) {
+    const previewContainer = document.getElementById('teacher-exam-preview-container');
+    if (!previewContainer) return;
+
+    // Show preview container
+    previewContainer.classList.remove('hidden');
+
+    // Populate editable fields with AI generated output
+    document.getElementById('preview-exam-title').value = examTitle || "Generated Assessment";
+    document.getElementById('preview-exam-content').value = rawQuestionsText;
+
+    // Populate target classes dropdown
+    populateTargetClassDropdown();
+
+    // Smooth scroll to the editor area
+    previewContainer.scrollIntoView({ behavior: 'smooth' });
+}
+
+function populateTargetClassDropdown() {
+    const classSelect = document.getElementById('target-class-select');
+    if (!classSelect) return;
+
+    classSelect.innerHTML = '<option value="">-- Select Enrolled Class --</option>';
+
+    const classesList = window.teacherClasses || [];
+    classesList.forEach(cls => {
+        const option = document.createElement('option');
+        option.value = cls.id || cls.code;
+        option.textContent = `${cls.name} (${cls.subject || 'General'})`;
+        classSelect.appendChild(option);
+    });
+}
+
+async function publishExamToClass() {
+    const title = document.getElementById('preview-exam-title').value;
+    const content = document.getElementById('preview-exam-content').value;
+    const classId = document.getElementById('target-class-select').value;
+
+    if (!classId) {
+        alert("Please select a target class to publish this exam.");
+        return;
+    }
+
+    if (!content.trim()) {
+        alert("Exam content cannot be empty.");
+        return;
+    }
+
+    try {
+        const { error } = await supabaseClient
+            .from('exams')
+            .insert([{ 
+                class_id: classId, 
+                title: title, 
+                content: content,
+                created_at: new Date()
+            }]);
+
+        if (error) throw error;
+
+        alert("Exam successfully published to class! Students can now access and take it.");
+        document.getElementById('teacher-exam-preview-container').classList.add('hidden');
+        
+    } catch (err) {
+        console.error("Failed to publish exam:", err);
+        alert("Failed to publish exam to database. Check console.");
+    }
+}
+
+function discardExamDraft() {
+    if (confirm("Are you sure you want to discard this exam draft?")) {
+        document.getElementById('teacher-exam-preview-container').classList.add('hidden');
+    }
 }
