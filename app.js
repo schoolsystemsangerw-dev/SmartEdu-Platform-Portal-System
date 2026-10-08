@@ -2468,12 +2468,11 @@ async function extractTextFromFile(fileInput) {
 }
 
 /**
- * 3. Gemini API Helper implementation (Updated with current active model)
+ * 3. Gemini API Helper implementation (Fixed for Bearer/AQ tokens and standard keys)
  */
 async function callGeminiAPI(promptText, apiKey) {
-    const modelName = 'gemini-2.5-flash'; // Updated from retired 1.5-flash
+    const modelName = 'gemini-2.5-flash';
     
-    // Check if it's an AQ token or standard AIza key to format the request correctly
     let url, headers;
     if (apiKey.startsWith('AQ.')) {
         url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
