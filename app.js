@@ -2466,19 +2466,30 @@ async function extractTextFromFile(fileInput) {
 
     return `[Uploaded Document: ${file.name}]`;
 }
-
 /**
  * 3. Gemini API Helper implementation
  */
 async function callGeminiAPI(promptText, apiKey) {
     const modelName = 'gemini-1.5-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    
+    // Check if it's an AQ token or standard AIza key to format the request correctly
+    let url, headers;
+    if (apiKey.startsWith('AQ.')) {
+        url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        };
+    } else {
+        url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+        headers = {
+            'Content-Type': 'application/json'
+        };
+    }
 
     const response = await fetch(url, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: headers,
         body: JSON.stringify({
             contents: [{
                 parts: [{ text: promptText }]
@@ -2533,46 +2544,11 @@ async function callChatGPTAPI(promptText, apiKey) {
     
     return textResult;
 }
+
+// Global variables for student exam portal
 let currentLoadedExamId = null;
 let loadedExamQuestions = [];
 
-async function loadExamForStudent(examId) {
-    currentLoadedExamId = examId;
-    
-    // Fetch exam from Supabase
-    const { data: exam, error } = await supabaseClient
-        .from('exams')
-        .select('*')
-        .eq('id', examId)
-        .single();
-
-    if (error || !exam) {
-        alert("Could not load exam.");
-        return;
-    }
-
-    loadedExamQuestions = exam.questions_json;
-    
-    // Update UI title
-    document.getElementById('student-exam-title').innerText = `Exam: ${exam.title}`;
-    
-    // Render questions on screen
-    const renderArea = document.getElementById('questions-render-area');
-    renderArea.innerHTML = '';
-
-    loadedExamQuestions.forEach((q, index) => {
-        renderArea.innerHTML += `
-            <div class="p-4 bg-slate-900 border border-slate-700 rounded-2xl space-y-2">
-                <p class="text-xs font-bold text-white">Q${index + 1}: ${q.question} <span class="text-indigo-400 font-normal">(${q.marks} marks)</span></p>
-                <input type="text" id="answer-${q.id}" placeholder="Type your answer here..." class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white">
-            </div>
-        `;
-    });
-
-    // Show the container on screen
-    document.getElementById('student-exam-container').classList.remove('hidden');
-    document.getElementById('student-exam-container').scrollIntoView({ behavior: 'smooth' });
-}
 // Function to fetch the exam and render questions on screen
 async function loadExamForStudent(examId) {
     currentLoadedExamId = examId;
