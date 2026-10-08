@@ -2468,10 +2468,10 @@ async function extractTextFromFile(fileInput) {
 }
 
 /**
- * 3. Gemini API Helper implementation
+ * 3. Gemini API Helper implementation (Updated with current active model)
  */
 async function callGeminiAPI(promptText, apiKey) {
-    const modelName = 'gemini-1.5-flash';
+    const modelName = 'gemini-2.5-flash'; // Updated from retired 1.5-flash
     
     // Check if it's an AQ token or standard AIza key to format the request correctly
     let url, headers;
