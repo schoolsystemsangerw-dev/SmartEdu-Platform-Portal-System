@@ -2468,28 +2468,19 @@ async function extractTextFromFile(fileInput) {
 }
 
 /**
- * 3. Gemini API Helper implementation (Fixed for Bearer/AQ tokens and standard keys)
+ * 3. Gemini API Helper implementation (Fixed: treats AQ. and standard keys correctly as API keys)
  */
 async function callGeminiAPI(promptText, apiKey) {
     const modelName = 'gemini-2.5-flash';
     
-    let url, headers;
-    if (apiKey.startsWith('AQ.')) {
-        url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        };
-    } else {
-        url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-        headers = {
-            'Content-Type': 'application/json'
-        };
-    }
+    // Both standard keys and AQ. authorization keys use the query parameter or x-goog-api-key header
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
         method: 'POST',
-        headers: headers,
+        headers: {
+            'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
             contents: [{
                 parts: [{ text: promptText }]
