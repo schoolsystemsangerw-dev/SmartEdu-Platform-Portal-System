@@ -2573,10 +2573,6 @@ async function loadExamForStudent(examId) {
     document.getElementById('student-exam-container').classList.remove('hidden');
     document.getElementById('student-exam-container').scrollIntoView({ behavior: 'smooth' });
 }
-// Global variables for student exam portal (place at the top or bottom of app.js)
-let currentLoadedExamId = null;
-let loadedExamQuestions = [];
-
 // Function to fetch the exam and render questions on screen
 async function loadExamForStudent(examId) {
     currentLoadedExamId = examId;
