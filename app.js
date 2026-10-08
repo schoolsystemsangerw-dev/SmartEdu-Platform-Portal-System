@@ -2390,78 +2390,12 @@ async function renderOfficialReports() {
     }
 }
 /**
- * 1. Main handler triggered by the "Generate AI Exam" button
- */
-async function handleAIGenerateExam() {
-    console.log("Generate AI Exam button clicked.");
-    
-    const examTitleInput = document.getElementById('ai-exam-title');
-    const examTitle = examTitleInput ? examTitleInput.value.trim() : "Exam Quiz";
-    
-    // Extract text from the uploaded document file
-    const fileInput = document.getElementById('ai-exam-file');
-    const documentText = await extractTextFromFile(fileInput);
-    
-    const promptText = `Generate a comprehensive multi-question exam titled "${examTitle}" based on the following curriculum notes/document content:\n\n${documentText}`;
-    
-    const statusBox = document.getElementById('ai-status-box');
-    if (statusBox) statusBox.classList.remove('hidden');
-    
-    try {
-        // Calls your secure Supabase Edge Function with prompt and API key
-        const result = await callChatGPTAPI(promptText);
-
-        console.log("Generated Exam:", result);
-        
-        if (statusBox) statusBox.classList.add('hidden');
-        
-        // Send generated exam directly to the teacher review & edit panel
-        handleExamGeneratedSuccess(examTitle, result);
-        
-    } catch (error) {
-        if (statusBox) statusBox.classList.add('hidden');
-        console.error("Exam generation failed:", error);
-        alert("Error generating exam. Check console for details.");
-    }
-}
-
-/**
- * 2. Helper function to read text or Word documents
- */
-async function extractTextFromFile(fileInput) {
-    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        return ""; 
-    }
-
-    const file = fileInput.files[0];
-    const fileName = file.name.toLowerCase();
-
-    if (fileName.endsWith('.txt')) {
-        return await file.text();
-    }
-
-    if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
-        const arrayBuffer = await file.arrayBuffer();
-        if (window.mammoth) {
-            const result = await window.mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-            return result.value;
-        } else {
-            return `[Uploaded Document: ${file.name}]`;
-        }
-    }
-
-    return `[Uploaded Document: ${file.name}]`;
-}
-
-/**
  * 3. Secure ChatGPT/Gemini API Helper (Invokes your Supabase Edge Function)
  */
 async function callChatGPTAPI(promptText) {
-    const apiKeyInput = document.getElementById('geminiApiKeyInput');
-    const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-
+    // Calls your Supabase Edge Function, which securely uses the backend secret key
     const { data, error } = await supabaseClient.functions.invoke('generate-exam', {
-        body: { promptText, apiKey }
+        body: { promptText }
     });
 
     if (error) {
@@ -2481,82 +2415,4 @@ async function callChatGPTAPI(promptText) {
     }
 
     return textResult;
-}
-
-/**
- * 4. Teacher Review, Edit & Publish Workflow Handlers
- */
-function handleExamGeneratedSuccess(examTitle, rawQuestionsText) {
-    const previewContainer = document.getElementById('teacher-exam-preview-container');
-    if (!previewContainer) return;
-
-    // Show preview container
-    previewContainer.classList.remove('hidden');
-
-    // Populate editable fields for the teacher
-    document.getElementById('preview-exam-title').value = examTitle || "Generated Assessment";
-    document.getElementById('preview-exam-content').value = rawQuestionsText;
-
-    // Populate target classes dropdown so teacher can choose where to publish
-    populateTargetClassDropdown();
-
-    // Smooth scroll to the editor area
-    previewContainer.scrollIntoView({ behavior: 'smooth' });
-}
-
-function populateTargetClassDropdown() {
-    const classSelect = document.getElementById('target-class-select');
-    if (!classSelect) return;
-
-    classSelect.innerHTML = '<option value="">-- Select Enrolled Class --</option>';
-
-    const classesList = window.teacherClasses || [];
-    classesList.forEach(cls => {
-        const option = document.createElement('option');
-        option.value = cls.id || cls.code;
-        option.textContent = `${cls.name} (${cls.subject || 'General'})`;
-        classSelect.appendChild(option);
-    });
-}
-
-async function publishExamToClass() {
-    const title = document.getElementById('preview-exam-title').value;
-    const content = document.getElementById('preview-exam-content').value;
-    const classId = document.getElementById('target-class-select').value;
-
-    if (!classId) {
-        alert("Please select a target class to publish this exam.");
-        return;
-    }
-
-    if (!content.trim()) {
-        alert("Exam content cannot be empty.");
-        return;
-    }
-
-    try {
-        const { error } = await supabaseClient
-            .from('exams')
-            .insert([{ 
-                class_id: classId, 
-                title: title, 
-                content: content,
-                created_at: new Date()
-            }]);
-
-        if (error) throw error;
-
-        alert("Exam successfully published to class! Students can now access it from their portal.");
-        document.getElementById('teacher-exam-preview-container').classList.add('hidden');
-        
-    } catch (err) {
-        console.error("Failed to publish exam:", err);
-        alert("Failed to publish exam to database. Check console.");
-    }
-}
-
-function discardExamDraft() {
-    if (confirm("Are you sure you want to discard this exam draft?")) {
-        document.getElementById('teacher-exam-preview-container').classList.add('hidden');
-    }
 }
