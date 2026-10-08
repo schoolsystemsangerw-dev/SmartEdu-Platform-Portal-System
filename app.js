@@ -2450,7 +2450,6 @@ async function extractTextFromFile(fileInput) {
 
     return `[Uploaded Document: ${file.name}]`;
 }
-
 /**
  * 3. Secure ChatGPT API Helper (Invokes your Supabase Edge Function)
  */
@@ -2459,13 +2458,20 @@ async function callChatGPTAPI(promptText) {
         body: { promptText }
     });
 
-    if (error || data.error) {
-        throw new Error(error?.message || data.error);
+    if (error) {
+        console.error("Supabase Function invocation error:", error);
+        throw new Error(error.message || JSON.stringify(error));
     }
 
-    const textResult = data.choices?.[0]?.message?.content;
+    if (data && data.error) {
+        console.error("OpenAI API error returned from function:", data.error);
+        throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+    }
+
+    const textResult = data?.choices?.[0]?.message?.content;
     if (!textResult) {
-        throw new Error("No response received from OpenAI.");
+        console.error("Unexpected response structure:", data);
+        throw new Error("No response content received from OpenAI.");
     }
 
     return textResult;
