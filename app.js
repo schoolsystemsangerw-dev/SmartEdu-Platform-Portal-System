@@ -2258,44 +2258,41 @@ async function approveStaff(userId) {
     alert('Staff account approved successfully!');
     renderHeadTeacherDashboard();
 }
-// Single Master Dashboard Dispatcher
-// ==========================================
-if (window.hasInitializedDashboard !== true) {
-    window.hasInitializedDashboard = true;
+// Global function to handle dashboard routing and rendering
+window.loadDashboardForUser = function(user) {
+    const activeUser = user || Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
+    console.log('Master Dispatcher Triggered. Active User:', activeUser);
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const activeUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
-        console.log('Master Dispatcher Triggered. Active User:', activeUser);
+    const actualRole = activeUser.role;
 
-        const actualRole = activeUser.role;
-
-        if (actualRole === 'head-teacher') {
-            const headTeacherDb = document.getElementById('head-teacher-dashboard');
-            if (headTeacherDb) headTeacherDb.classList.remove('hidden');
-            if (typeof renderHeadTeacherDashboard === 'function') {
-                renderHeadTeacherDashboard();
-            }
-        } else if (actualRole === 'teacher') {
-            const teacherDb = document.getElementById('teacher-dashboard');
-            if (teacherDb) teacherDb.classList.remove('hidden');
-            if (typeof renderTeacherDashboard === 'function') {
-                renderTeacherDashboard();
-            }
-        } else if (actualRole === 'student') {
-            const studentDb = document.getElementById('student-dashboard');
-            if (studentDb) studentDb.classList.remove('hidden');
-            if (typeof renderStudentDashboard === 'function') {
-                renderStudentDashboard();
-            }
-        } else if (actualRole === 'owner') {
-            const ownerDb = document.getElementById('owner-dashboard');
-            if (ownerDb) ownerDb.classList.remove('hidden');
-            if (typeof renderOwnerDashboard === 'function') {
-                renderOwnerDashboard();
-            }
+    if (actualRole === 'head-teacher') {
+        const headTeacherDb = document.getElementById('head-teacher-dashboard');
+        if (headTeacherDb) headTeacherDb.classList.remove('hidden');
+        if (typeof renderHeadTeacherDashboard === 'function') renderHeadTeacherDashboard();
+    } else if (actualRole === 'teacher') {
+        const teacherDb = document.getElementById('teacher-dashboard');
+        if (teacherDb) teacherDb.classList.remove('hidden');
+        if (typeof renderTeacherDashboard === 'function') renderTeacherDashboard();
+    } else if (actualRole === 'student') {
+        const studentDb = document.getElementById('student-dashboard');
+        if (studentDb) studentDb.classList.remove('hidden');
+        if (typeof renderStudentDashboard === 'function') {
+            renderStudentDashboard(); // <-- Automatically fetches and renders your 6 classes!
         }
-    });
-}
+    } else if (actualRole === 'owner') {
+        const ownerDb = document.getElementById('owner-dashboard');
+        if (ownerDb) ownerDb.classList.remove('hidden');
+        if (typeof renderOwnerDashboard === 'function') renderOwnerDashboard();
+    }
+};
+
+// 1. Run on initial page load if a session already exists
+document.addEventListener('DOMContentLoaded', () => {
+    const savedUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
+    if (savedUser && savedUser.role) {
+        window.loadDashboardForUser(savedUser);
+    }
+});
 // Data Loader & Renderer for Head Teacher Academic Performance
 async function renderHtAcademics() {
     const container = document.getElementById('ht-academics-container');
