@@ -270,42 +270,43 @@ function setupEventListeners() {
         });
     }
 
-   // Login Handler
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
+  // Login Handler
+const loginForm = document.getElementById('login-form');
+if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
 
-            const { data: user, error } = await supabaseClient
-                .from('profiles')
-                .select('*')
-                .eq('email', email)
-                .eq('password', password)
-                .maybeSingle();
+        const { data: user, error } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('email', email)
+            .eq('password', password)
+            .maybeSingle();
 
-            if (error || !user) {
-                alert('Invalid email or password.');
-                return;
+        if (error || !user) {
+            alert('Invalid email or password.');
+            return;
+        }
+
+        if ((user.role === 'teacher' || user.role === 'head-teacher') && user.account_status === 'pending') {
+            alert('Your account is pending payment verification by the System Owner. Please contact schoolsystems.ange.rw@gmail.com.');
+            return;
+        }
+
+        Session.setUser(user);
+        window.currentUser = user; // <-- Ensures global availability for dashboard rendering
+        checkSession();
+
+        // FIX: Force render student dashboard upon successful login
+        setTimeout(() => {
+            if (typeof renderStudentDashboard === 'function') {
+                renderStudentDashboard();
             }
-
-            if ((user.role === 'teacher' || user.role === 'head-teacher') && user.account_status === 'pending') {
-                alert('Your account is pending payment verification by the System Owner. Please contact schoolsystems.ange.rw@gmail.com.');
-                return;
-            }
-
-            Session.setUser(user);
-            checkSession();
-
-            // FIX: Force render student dashboard upon successful login
-            setTimeout(() => {
-                if (typeof renderStudentDashboard === 'function') {
-                    renderStudentDashboard();
-                }
-            }, 150);
-        });
-    }
+        }, 150);
+    });
+}
     // Logout Handler
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
