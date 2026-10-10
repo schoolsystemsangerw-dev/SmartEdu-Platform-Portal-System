@@ -2589,3 +2589,59 @@ function discardExamDraft() {
         document.getElementById('teacher-exam-preview-container').classList.add('hidden');
     }
 }
+
+/**
+ * 5. Student Join Class Form Handler
+ */
+function setupStudentJoinHandler() {
+    const joinClassForm = document.getElementById('join-class-form');
+    if (joinClassForm) {
+        joinClassForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const classCodeInput = document.getElementById('join-class-code') || document.getElementById('join-code');
+            const classCode = classCodeInput ? classCodeInput.value.trim().toUpperCase() : '';
+
+            if (!classCode) {
+                alert('Please enter a valid class code.');
+                return;
+            }
+
+            const currentUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
+
+            const { data: classData, error: classError } = await supabaseClient
+                .from('classes')
+                .select('*')
+                .eq('class_code', classCode)
+                .maybeSingle();
+
+            if (classError || !classData) {
+                alert('Invalid Class Code! Please check the code with your teacher.');
+                return;
+            }
+
+            const { error: enrollError } = await supabaseClient
+                .from('enrollments')
+                .insert([{
+                    student_email: currentUser.email,
+                    class_code: classCode
+                }]);
+
+            if (enrollError) {
+                if (enrollError.code === '23505' || enrollError.status === 409) {
+                    alert('You are already enrolled in this class!');
+                } else {
+                    alert('Failed to join class: ' + enrollError.message);
+                    return;
+                }
+            } else {
+                alert('Successfully joined ' + (classData.class_name || classCode) + '!');
+            }
+
+            if (classCodeInput) classCodeInput.value = '';
+            
+            if (typeof renderStudentDashboard === 'function') {
+                renderStudentDashboard();
+            }
+        });
+    }
+}
