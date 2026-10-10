@@ -755,3 +755,150 @@ async function renderHeadTeacherDashboard() {
         console.error('Error fetching dashboard data:', err);
     }
 }
+// AI Exam Generation Handler
+window.handleAIGenerateExam = async function() {
+    console.log("Generate AI Exam button clicked.");
+    const examTitleInput = document.getElementById('ai-exam-title');
+    const examTitle = examTitleInput ? examTitleInput.value.trim() : "Exam Quiz";
+    
+    const fileInput = document.getElementById('ai-exam-file');
+    const documentText = await extractTextFromFile(fileInput);
+    
+    const promptText = `Generate a comprehensive multi-question exam titled "${examTitle}" based on the following curriculum notes/document content:\n\n${documentText}`;
+    
+    const statusBox = document.getElementById('ai-status-box');
+    if (statusBox) statusBox.classList.remove('hidden');
+    
+    try {
+        const result = await callChatGPTAPI(promptText);
+        if (statusBox) statusBox.classList.add('hidden');
+        handleExamGeneratedSuccess(examTitle, result);
+    } catch (error) {
+        if (statusBox) statusBox.classList.add('hidden');
+        console.error("Exam generation failed:", error);
+        alert("Error generating exam. Check console for details.");
+    }
+};
+
+async function extractTextFromFile(fileInput) {
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) return "";
+    const file = fileInput.files[0];
+    const fileName = file.name.toLowerCase();
+
+    if (fileName.endsWith('.txt')) {
+        return await file.text();
+    }
+    if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+        const arrayBuffer = await file.arrayBuffer();
+        if (window.mammoth) {
+            const result = await window.mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+            return result.value;
+        }
+    }
+    return `[Uploaded Document: ${file.name}]`;
+}
+
+async function callChatGPTAPI(promptText) {
+    const apiKeyInput = document.getElementById('geminiApiKeyInput');
+    const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+
+    const { data, error } = await supabaseClient.functions.invoke('generate-exam', {
+        body: { promptText, apiKey }
+    });
+
+    if (error) throw new Error(error.message || JSON.stringify(error));
+    if (data && data.error) throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+
+    const textResult = data?.choices?.[0]?.message?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text;
+    if (!textResult) throw new Error("No response content received from AI.");
+    return textResult;
+}
+
+async function handleExamGeneratedSuccess(examTitle, rawQuestionsText) {
+    const previewContainer = document.getElementById('teacher-exam-preview-container');
+    if (!previewContainer) return;
+
+    previewContainer.classList.remove('hidden');
+    document.getElementById('preview-exam-title').value = examTitle || "Generated Assessment";
+    document.getElementById('preview-exam-content').value = rawQuestionsText;
+    
+    await populateTargetClassDropdown();
+    previewContainer.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function populateTargetClassDropdown() {
+    const classSelect = document.getElementById('target-class-select');
+    if (!classSelect) return;
+    classSelect.innerHTML = '<option value="">-- Select Enrolled Class --</option>';
+
+    try {
+        const currentUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
+        if (currentUser?.email) {
+            const { data } = await supabaseClient.from('classes').select('*').eq('teacher_email', currentUser.email);
+            if (data) {
+                data.forEach(cls => {
+                    const option = document.createElement('option');
+                    option.value = cls.class_code;
+                    option.textContent = `${cls.class_name} (${cls.subject || 'General'})`;
+                    classSelect.appendChild(option);
+                });
+            }
+        }
+    } catch (err) {
+        console.error("Failed to load classes:", err);
+    }
+}
+
+// Teacher View Exam Results Modal
+window.viewExamResults = async function(examId) {
+    const modal = document.getElementById('exam-modal');
+    const title = document.getElementById('exam-modal-title');
+    const subtitle = document.getElementById('exam-modal-subtitle');
+    const body = document.getElementById('exam-modal-body');
+    const footer = document.getElementById('exam-modal-footer');
+
+    if (!modal) return;
+
+    const { data: exam, error: examError } = await supabaseClient.from('exams').select('*').eq('id', examId).single();
+    if (examError || !exam) {
+        alert("Could not load exam details.");
+        return;
+    }
+
+    const { data: submissions } = await supabaseClient.from('submissions').select('*').eq('exam_id', examId).order('score_obtained', { ascending: false });
+
+    title.innerText = `Exam Results: ${exam.title}`;
+    subtitle.innerText = `Total Marks: ${exam.total_marks} | Submissions: ${submissions ? submissions.length : 0}`;
+
+    if (!submissions || submissions.length === 0) {
+        body.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm">No submissions received yet.</div>`;
+    } else {
+        body.innerHTML = `
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-slate-400 uppercase font-bold">
+                            <th class="py-3 px-3">Student Name</th>
+                            <th class="py-3 px-3">Email</th>
+                            <th class="py-3 px-3 text-center">Score</th>
+                            <th class="py-3 px-3 text-center">Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800 text-slate-300">
+                        ${submissions.map(sub => `
+                            <tr>
+                                <td class="py-3 px-3 font-bold text-white">${sub.student_name || 'Student'}</td>
+                                <td class="py-3 px-3 font-mono text-slate-400">${sub.student_email}</td>
+                                <td class="py-3 px-3 text-center font-mono font-bold text-indigo-300">${sub.score_obtained} /${exam.total_marks}</td>
+                                <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded text-xs font-bold ${sub.percentage >= 50 ? 'bg-emerald-950 text-emerald-300' : 'bg-rose-950 text-rose-300'}">${sub.percentage}%</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    footer.innerHTML = `<button onclick="window.closeExamModal()" class="px-5 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Close</button>`;
+    modal.classList.remove('hidden');
+};
