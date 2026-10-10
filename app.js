@@ -270,7 +270,7 @@ function setupEventListeners() {
         });
     }
 
-    // Login Handler
+   // Login Handler
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
@@ -297,9 +297,15 @@ function setupEventListeners() {
 
             Session.setUser(user);
             checkSession();
+
+            // FIX: Force render student dashboard upon successful login
+            setTimeout(() => {
+                if (typeof renderStudentDashboard === 'function') {
+                    renderStudentDashboard();
+                }
+            }, 150);
         });
     }
-
     // Logout Handler
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
