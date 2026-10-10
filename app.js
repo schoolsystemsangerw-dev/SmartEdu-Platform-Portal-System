@@ -789,9 +789,6 @@ async function renderStudentDashboard() {
         `;
     }).join('');
 
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-    }
     console.log("-> 10. renderStudentDashboard completed successfully!");
 }
     // Refresh Lucide icons after injecting HTML
