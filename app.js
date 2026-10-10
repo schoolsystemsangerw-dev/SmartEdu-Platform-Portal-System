@@ -979,29 +979,30 @@ window.openStudentExam = async function(examId) {
     body.innerHTML = `
         <div class="text-center py-16 space-y-3">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent"></div>
-            <p class="text-xs font-bold text-white">Gemini Teacher is analyzing exam structure & sub-parts...</p>
-            <p class="text-xs text-slate-400">Separating instructions, breaking down (a), (b), (c), and formatting reference maps.</p>
+            <p class="text-xs font-bold text-white">Gemini Teacher is analyzing, cleaning, and structuring the exam...</p>
+            <p class="text-xs text-slate-400">Refining diagram text, separating sub-parts (a), (b), (c), and hiding answer keys.</p>
         </div>
     `;
     modal.classList.remove('hidden');
 
     try {
         const parsePrompt = `
-You are an expert primary/secondary school head teacher and psychometric exam designer with human-like understanding. Analyze the following raw exam text. 
+You are an expert primary/secondary school head teacher, curriculum editor, and psychometric exam designer with advanced human-like intelligence. Analyze the following raw exam text. 
 
 CRITICAL RULES:
 1. SECURITY: If the text contains a "MARKING GUIDE", "MARKING SCHEME", or answer key anywhere, completely discard and exclude it. Students must never see answers!
-2. SUB-PARTS BREAKDOWN: If a question contains sub-parts like (a), (b), (c) or (i), (ii), (iii), DO NOT group them into one. Break them down into separate individual question objects in the JSON array so each sub-part gets its own answer box.
-3. METADATA: Identify fields like Candidate's Name, Index No., or School Name and classify them as "metadata".
-4. DIAGRAMS & MAPS: If there is a sketch map description or diagram text, classify it as "diagram".
-5. INSTRUCTIONS: Classify headers, class info, time allowed, and section rules as "instruction".
-6. QUESTIONS: Classify actual graded test items as "question".
+2. THINK & REFORMAT (TEACHER INTELLIGENCE): If you notice typos, messy formatting, or leaked answers/hints inside diagram descriptions or questions, use your intelligence to clean, correct, and rephrase them into professional, clear exam questions that a student should properly answer without giving away the answers.
+3. SUB-PARTS BREAKDOWN: If a question contains sub-parts like (a), (b), (c) or (i), (ii), (iii), DO NOT group them into one. Break them down into separate individual question objects in the JSON array so each sub-part gets its own answer box.
+4. METADATA: Identify fields like Candidate's Name, Index No., or School Name and classify them as "metadata".
+5. DIAGRAMS & MAPS: If there is a sketch map description or diagram text, clean up any unwanted text hints and classify it as "diagram".
+6. INSTRUCTIONS: Classify headers, class info, time allowed, and section rules as "instruction".
+7. QUESTIONS: Classify actual graded test items as "question".
 
 Return your response STRICTLY as a JSON array of objects with this exact format:
 [
   { "type": "instruction", "text": "CLASS: PRIMARY FIVE" },
   { "type": "metadata", "text": "Candidate’s Name:" },
-  { "type": "diagram", "text": "Study the sketch map of Uganda below..." },
+  { "type": "diagram", "text": "Study the clean reference map layout below..." },
   { "type": "question", "text": "41. (a) Name the lake marked L." },
   { "type": "question", "text": "41. (b) State the physical feature labeled Mt. Rwenzori." }
 ]
