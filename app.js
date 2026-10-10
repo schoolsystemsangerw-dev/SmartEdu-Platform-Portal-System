@@ -2395,173 +2395,73 @@ async function renderOfficialReports() {
 async function handleAIGenerateExam() {
     console.log("Generate AI Exam button clicked.");
     
+    // Get API key dynamically from the input field
+    const apiKeyInput = document.getElementById('geminiApiKeyInput');
+    const apiKey = apiKeyInput ? apiKeyInput.value.trim() : "";
+    
+    // Check if the user entered an API key
+    if (!apiKey) {
+        alert("Please enter your Gemini API key in the field above first!");
+        if (apiKeyInput) apiKeyInput.focus();
+        return;
+    }
+    
+    // Get the exam title if provided
     const examTitleInput = document.getElementById('ai-exam-title');
     const examTitle = examTitleInput ? examTitleInput.value.trim() : "Exam Quiz";
     
-    // Extract text from the uploaded document file
-    const fileInput = document.getElementById('ai-exam-file');
-    const documentText = await extractTextFromFile(fileInput);
+    const promptText = `Generate a comprehensive multi-question exam titled "${examTitle}" based on school curriculum notes.`;
     
-    const promptText = `Generate a comprehensive multi-question exam titled "${examTitle}" based on the following curriculum notes/document content:\n\n${documentText}`;
-    
+    // Show loading status box if it exists in your HTML
     const statusBox = document.getElementById('ai-status-box');
     if (statusBox) statusBox.classList.remove('hidden');
     
     try {
-        // Calls your secure Supabase Edge Function (bypassing browser CORS and passing the API key)
-        const result = await callChatGPTAPI(promptText);
-
+        // Call the Gemini API function
+        const result = await callGeminiAPI(promptText, apiKey);
         console.log("Generated Exam:", result);
         
         if (statusBox) statusBox.classList.add('hidden');
+        alert("Exam generated successfully! Check your console for output.");
         
-        // Trigger teacher preview & edit mode instead of an alert
-        handleExamGeneratedSuccess(examTitle, result);
-        
+        // TODO: Render the generated exam text onto your portal UI here
     } catch (error) {
         if (statusBox) statusBox.classList.add('hidden');
         console.error("Exam generation failed:", error);
-        alert("Error generating exam. Check console for details.");
+        alert("Error generating exam. Check your API key or console for details.");
     }
 }
 
 /**
- * 2. Helper function to read text or Word documents
+ * 2. Helper implementation of callGeminiAPI using Google's Gemini Flash endpoint
  */
-async function extractTextFromFile(fileInput) {
-    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        return ""; 
-    }
+async function callGeminiAPI(promptText, apiKey) {
+    const modelName = 'gemini-1.5-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-    const file = fileInput.files[0];
-    const fileName = file.name.toLowerCase();
-
-    if (fileName.endsWith('.txt')) {
-        return await file.text();
-    }
-
-    if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
-        const arrayBuffer = await file.arrayBuffer();
-        if (window.mammoth) {
-            const result = await window.mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-            return result.value;
-        } else {
-            return `[Uploaded Document: ${file.name}]`;
-        }
-    }
-
-    return `[Uploaded Document: ${file.name}]`;
-}
-
-/**
- * 3. Secure ChatGPT API Helper (Invokes your Supabase Edge Function with API Key)
- */
-async function callChatGPTAPI(promptText) {
-    // Grab the API key from your UI password input field
-    const apiKeyInput = document.getElementById('geminiApiKeyInput');
-    const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-
-    const { data, error } = await supabaseClient.functions.invoke('generate-exam', {
-        body: { 
-            promptText, 
-            apiKey 
-        }
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            contents: [{
+                parts: [{ text: promptText }]
+            }]
+        })
     });
 
-    if (error) {
-        console.error("Supabase Function invocation error:", error);
-        throw new Error(error.message || JSON.stringify(error));
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Gemini API Error details:", errorText);
+        throw new Error(`Gemini API Error: ${response.status} ${response.statusText}`);
     }
 
-    if (data && data.error) {
-        console.error("API error returned from function:", data.error);
-        throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
-    }
-
-    // Handles OpenAI or Gemini response mapping safely
-    const textResult = data?.choices?.[0]?.message?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text;
+    const data = await response.json();
+    const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!textResult) {
-        console.error("Unexpected response structure:", data);
-        throw new Error("No response content received from AI.");
+        throw new Error("No response received from Gemini API.");
     }
-
+    
     return textResult;
-}
-
-/**
- * 4. Teacher Review, Edit & Publish Workflow Handlers
- */
-function handleExamGeneratedSuccess(examTitle, rawQuestionsText) {
-    const previewContainer = document.getElementById('teacher-exam-preview-container');
-    if (!previewContainer) return;
-
-    // Show preview container
-    previewContainer.classList.remove('hidden');
-
-    // Populate editable fields with AI generated output
-    document.getElementById('preview-exam-title').value = examTitle || "Generated Assessment";
-    document.getElementById('preview-exam-content').value = rawQuestionsText;
-
-    // Populate target classes dropdown
-    populateTargetClassDropdown();
-
-    // Smooth scroll to the editor area
-    previewContainer.scrollIntoView({ behavior: 'smooth' });
-}
-
-function populateTargetClassDropdown() {
-    const classSelect = document.getElementById('target-class-select');
-    if (!classSelect) return;
-
-    classSelect.innerHTML = '<option value="">-- Select Enrolled Class --</option>';
-
-    const classesList = window.teacherClasses || [];
-    classesList.forEach(cls => {
-        const option = document.createElement('option');
-        option.value = cls.id || cls.code;
-        option.textContent = `${cls.name} (${cls.subject || 'General'})`;
-        classSelect.appendChild(option);
-    });
-}
-
-async function publishExamToClass() {
-    const title = document.getElementById('preview-exam-title').value;
-    const content = document.getElementById('preview-exam-content').value;
-    const classId = document.getElementById('target-class-select').value;
-
-    if (!classId) {
-        alert("Please select a target class to publish this exam.");
-        return;
-    }
-
-    if (!content.trim()) {
-        alert("Exam content cannot be empty.");
-        return;
-    }
-
-    try {
-        const { error } = await supabaseClient
-            .from('exams')
-            .insert([{ 
-                class_id: classId, 
-                title: title, 
-                content: content,
-                created_at: new Date()
-            }]);
-
-        if (error) throw error;
-
-        alert("Exam successfully published to class! Students can now access and take it.");
-        document.getElementById('teacher-exam-preview-container').classList.add('hidden');
-        
-    } catch (err) {
-        console.error("Failed to publish exam:", err);
-        alert("Failed to publish exam to database. Check console.");
-    }
-}
-
-function discardExamDraft() {
-    if (confirm("Are you sure you want to discard this exam draft?")) {
-        document.getElementById('teacher-exam-preview-container').classList.add('hidden');
-    }
 }
