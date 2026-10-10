@@ -902,3 +902,51 @@ window.viewExamResults = async function(examId) {
     footer.innerHTML = `<button onclick="window.closeExamModal()" class="px-5 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Close</button>`;
     modal.classList.remove('hidden');
 };
+// Publish AI Generated Exam to Class
+window.publishExamToClass = async function() {
+    const title = document.getElementById('preview-exam-title')?.value;
+    const content = document.getElementById('preview-exam-content')?.value;
+    const classCode = document.getElementById('target-class-select')?.value;
+
+    if (!classCode) {
+        alert("Please select a target class to publish this exam.");
+        return;
+    }
+
+    if (!content || !content.trim()) {
+        alert("Exam content cannot be empty.");
+        return;
+    }
+
+    const currentUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
+
+    try {
+        const payload = {
+            title: title || "AI Assessment",
+            questions: content,
+            class_code: classCode, 
+            teacher_email: currentUser.email || 'schoolsystems.ange.rw@gmail.com'
+        };
+
+        const { error } = await supabaseClient
+            .from('exams')
+            .insert([payload]);
+
+        if (error) throw error;
+
+        alert("Exam successfully published to class! Students can now access it from their portal.");
+        const previewContainer = document.getElementById('teacher-exam-preview-container');
+        if (previewContainer) previewContainer.classList.add('hidden');
+        
+    } catch (err) {
+        console.error("Failed to publish exam:", err);
+        alert("Failed to publish exam to database: " + (err.message || 'Unknown error'));
+    }
+};
+
+window.discardExamDraft = function() {
+    if (confirm("Are you sure you want to discard this exam draft?")) {
+        const previewContainer = document.getElementById('teacher-exam-preview-container');
+        if (previewContainer) previewContainer.classList.add('hidden');
+    }
+};
