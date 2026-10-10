@@ -725,7 +725,6 @@ async function renderStudentDashboard() {
         teacherProfiles.forEach(t => { teacherMap[t.email] = t; });
     }
 
-    // FIX: Added .join('') at the end of classes.map so it renders correctly into HTML string
     container.innerHTML = classes.map(c => {
         const teacher = teacherMap[c.teacher_email] || {};
         const logoUrl = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(teacher.school_logo_url) : null;
@@ -789,14 +788,14 @@ async function renderStudentDashboard() {
                 </div>
             </div>
         `;
-    }).join(''); // <-- CRITICAL FIX: Joins the array of card strings into a single HTML string
+    }).join('');
 
     // Refresh Lucide icons after injecting HTML
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
         lucide.createIcons();
     }
 }
-                    <!-- STUDENT REPORT CARD GENERATOR SECTION -->
+<!-- STUDENT REPORT CARD GENERATOR SECTION -->
                     <div class="mt-3 pt-3 border-t border-slate-800/80 space-y-2.5">
                         <h5 class="text-xs font-bold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider">
                             <i data-lucide="award" class="w-3.5 h-3.5 text-emerald-400"></i> My Report Card
