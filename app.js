@@ -2497,7 +2497,7 @@ async function handleExamGeneratedSuccess(examTitle, rawQuestionsText) {
     document.getElementById('preview-exam-title').value = examTitle || "Generated Assessment";
     document.getElementById('preview-exam-content').value = rawQuestionsText;
 
-    // Populate target classes dropdown so teacher can choose where to publish (made async to support direct fetching)
+    // Populate target classes dropdown so teacher can choose where to publish
     await populateTargetClassDropdown();
 
     // Smooth scroll to the editor area
@@ -2536,8 +2536,8 @@ async function populateTargetClassDropdown() {
     // Populate dropdown options dynamically
     classesList.forEach(cls => {
         const option = document.createElement('option');
-        option.value = cls.id || cls.code || cls.class_code;
-        option.textContent = `${cls.name || cls.class_name || cls.class_code} (${cls.subject || 'General'})`;
+        option.value = cls.class_code || cls.code || cls.id;
+        option.textContent = `${cls.class_name || cls.name || cls.class_code} (${cls.subject || 'General'})`;
         classSelect.appendChild(option);
     });
 }
@@ -2545,9 +2545,9 @@ async function populateTargetClassDropdown() {
 async function publishExamToClass() {
     const title = document.getElementById('preview-exam-title').value;
     const content = document.getElementById('preview-exam-content').value;
-    const classId = document.getElementById('target-class-select').value;
+    const classCode = document.getElementById('target-class-select').value;
 
-    if (!classId) {
+    if (!classCode) {
         alert("Please select a target class to publish this exam.");
         return;
     }
@@ -2557,15 +2557,20 @@ async function publishExamToClass() {
         return;
     }
 
+    const currentUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
+
     try {
+        const payload = {
+            title: title,
+            exam_title: title,
+            content: content,
+            class_code: classCode, // Matches Supabase schema column
+            teacher_email: currentUser.email || 'mwesigwaelias@gmail.com'
+        };
+
         const { error } = await supabaseClient
             .from('exams')
-            .insert([{ 
-                class_id: classId, 
-                title: title, 
-                content: content,
-                created_at: new Date()
-            }]);
+            .insert([payload]);
 
         if (error) throw error;
 
