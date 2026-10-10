@@ -950,3 +950,154 @@ window.discardExamDraft = function() {
         if (previewContainer) previewContainer.classList.add('hidden');
     }
 };
+// Student Take Exam Modal Launcher
+window.openStudentExam = async function(examId) {
+    const { data: exam, error } = await supabaseClient
+        .from('exams')
+        .select('*')
+        .eq('id', examId)
+        .single();
+
+    if (error || !exam) {
+        alert("Could not load exam details.");
+        return;
+    }
+
+    const modal = document.getElementById('exam-modal');
+    const title = document.getElementById('exam-modal-title');
+    const subtitle = document.getElementById('exam-modal-subtitle');
+    const body = document.getElementById('exam-modal-body');
+    const footer = document.getElementById('exam-modal-footer');
+
+    if (!modal) return;
+
+    title.innerText = exam.title;
+    subtitle.innerText = `Duration: ${exam.duration_minutes} Mins | Total Marks: ${exam.total_marks}`;
+
+    const lines = exam.questions.split('\n').filter(l => l.trim() !== '');
+    
+    let html = `<form id="student-exam-form" class="space-y-4">`;
+    lines.forEach((line, idx) => {
+        html += `<div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">`;
+        if (line.includes('[') && line.includes(']')) {
+            const qText = line.split('[')[0].trim();
+            const rawOptions = line.substring(line.indexOf('[') + 1, line.indexOf(']')).split('|');
+            
+            html += `<p class="text-xs font-bold text-white">${qText}</p><div class="space-y-1 mt-2">`;
+            rawOptions.forEach(opt => {
+                const cleanOpt = opt.replace('*', '').trim();
+                html += `
+                    <label class="flex items-center gap-2 text-xs text-slate-300 p-2 bg-slate-900 rounded-lg border border-slate-800 cursor-pointer hover:bg-slate-800">
+                        <input type="radio" name="q_${idx}" value="${cleanOpt}" class="text-indigo-600">
+                        ${cleanOpt}
+                    </label>
+                `;
+            });
+            html += `</div>`;
+        } else if (line.includes('{') && line.includes('}')) {
+            const qText = line.replace(/\{([^}]+)\}/g, '_____');
+            html += `
+                <p class="text-xs font-bold text-white">${qText}</p>
+                <input type="text" name="q_${idx}" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-white mt-2" placeholder="Type your answer here...">
+            `;
+        } else {
+            html += `<p class="text-xs font-bold text-white">${line}</p>`;
+        }
+        html += `</div>`;
+    });
+    html += `</form>`;
+
+    body.innerHTML = html;
+    footer.innerHTML = `
+        <button onclick="window.closeExamModal()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Cancel</button>
+        <button onclick="window.submitStudentExam(${exam.id})" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-lg">Submit Answers</button>
+    `;
+
+    modal.classList.remove('hidden');
+};
+
+// Student Auto-Grading Submission Handler
+window.submitStudentExam = async function(examId) {
+    const form = document.getElementById('student-exam-form');
+    if (!form) return;
+
+    const { data: exam, error } = await supabaseClient
+        .from('exams')
+        .select('*')
+        .eq('id', examId)
+        .single();
+
+    if (error || !exam) {
+        alert("Failed to evaluate exam.");
+        return;
+    }
+
+    const lines = exam.questions.split('\n').filter(l => l.trim() !== '');
+    let totalQuestions = lines.length;
+    let correctCount = 0;
+    const studentAnswers = {};
+
+    lines.forEach((line, idx) => {
+        let expectedAnswer = "";
+        let studentAnswer = "";
+
+        if (line.includes('[') && line.includes(']')) {
+            const rawOptions = line.substring(line.indexOf('[') + 1, line.indexOf(']')).split('|');
+            const correctOpt = rawOptions.find(o => o.includes('*'));
+            if (correctOpt) expectedAnswer = correctOpt.replace('*', '').trim().toLowerCase();
+
+            const selectedRadio = form.querySelector(`input[name="q_${idx}"]:checked`);
+            if (selectedRadio) studentAnswer = selectedRadio.value.trim().toLowerCase();
+        } else if (line.includes('{') && line.includes('}')) {
+            const match = line.match(/\{([^}]+)\}/);
+            if (match) expectedAnswer = match[1].trim().toLowerCase();
+
+            const textInput = form.querySelector(`input[name="q_${idx}"]`);
+            if (textInput) studentAnswer = textInput.value.trim().toLowerCase();
+        }
+
+        studentAnswers[`q_${idx}`] = studentAnswer;
+        if (studentAnswer && expectedAnswer && studentAnswer === expectedAnswer) {
+            correctCount++;
+        }
+    });
+
+    const pointsPerQuestion = exam.total_marks / (totalQuestions || 1);
+    const scoreObtained = Math.round(correctCount * pointsPerQuestion);
+    const percentage = Math.round((scoreObtained / exam.total_marks) * 100);
+
+    const activeUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const studentEmail = activeUser?.email || 'student@smartedu.rw';
+    const studentName = activeUser?.name || activeUser?.full_name || 'Student';
+
+    const { error: subError } = await supabaseClient
+        .from('submissions')
+        .insert([{
+            exam_id: examId,
+            student_email: studentEmail,
+            student_name: studentName,
+            score_obtained: scoreObtained,
+            percentage: percentage,
+            answers: JSON.stringify(studentAnswers)
+        }]);
+
+    if (subError) {
+        alert("Error submitting exam: " + subError.message);
+    } else {
+        alert(`Exam submitted successfully! Score: ${scoreObtained}/${exam.total_marks} (${percentage}%)`);
+        window.closeExamModal();
+        renderStudentDashboard();
+    }
+};
+
+window.viewStudentMarkingGuide = async function(examId) {
+    const activeUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const { data: exam } = await supabaseClient.from('exams').select('*').eq('id', examId).single();
+    const { data: sub } = await supabaseClient.from('submissions').select('*').eq('exam_id', examId).eq('student_email', activeUser?.email).single();
+
+    if (!exam || !sub) {
+        alert("Could not load marking guide.");
+        return;
+    }
+    alert(`Marking Guide - Score: ${sub.score_obtained}/${exam.total_marks} (${sub.percentage}%)`);
+};
