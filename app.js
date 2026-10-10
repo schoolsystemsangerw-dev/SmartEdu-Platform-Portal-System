@@ -2486,7 +2486,7 @@ async function callChatGPTAPI(promptText) {
 /**
  * 4. Teacher Review, Edit & Publish Workflow Handlers
  */
-function handleExamGeneratedSuccess(examTitle, rawQuestionsText) {
+async function handleExamGeneratedSuccess(examTitle, rawQuestionsText) {
     const previewContainer = document.getElementById('teacher-exam-preview-container');
     if (!previewContainer) return;
 
@@ -2497,24 +2497,47 @@ function handleExamGeneratedSuccess(examTitle, rawQuestionsText) {
     document.getElementById('preview-exam-title').value = examTitle || "Generated Assessment";
     document.getElementById('preview-exam-content').value = rawQuestionsText;
 
-    // Populate target classes dropdown so teacher can choose where to publish
-    populateTargetClassDropdown();
+    // Populate target classes dropdown so teacher can choose where to publish (made async to support direct fetching)
+    await populateTargetClassDropdown();
 
     // Smooth scroll to the editor area
     previewContainer.scrollIntoView({ behavior: 'smooth' });
 }
 
-function populateTargetClassDropdown() {
+async function populateTargetClassDropdown() {
     const classSelect = document.getElementById('target-class-select');
     if (!classSelect) return;
 
     classSelect.innerHTML = '<option value="">-- Select Enrolled Class --</option>';
 
-    const classesList = window.teacherClasses || [];
+    let classesList = window.teacherClasses || [];
+
+    // If cache is empty, fetch classes directly from Supabase for the active teacher session
+    if (classesList.length === 0) {
+        try {
+            const currentUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
+            if (currentUser?.email) {
+                const { data, error } = await supabaseClient
+                    .from('classes')
+                    .select('*')
+                    .eq('teacher_email', currentUser.email);
+
+                if (error) throw error;
+                if (data) {
+                    classesList = data;
+                    window.teacherClasses = data; // Cache for future use
+                }
+            }
+        } catch (err) {
+            console.error("Failed to load classes from database:", err);
+        }
+    }
+
+    // Populate dropdown options dynamically
     classesList.forEach(cls => {
         const option = document.createElement('option');
-        option.value = cls.id || cls.code;
-        option.textContent = `${cls.name} (${cls.subject || 'General'})`;
+        option.value = cls.id || cls.code || cls.class_code;
+        option.textContent = `${cls.name || cls.class_name || cls.class_code} (${cls.subject || 'General'})`;
         classSelect.appendChild(option);
     });
 }
