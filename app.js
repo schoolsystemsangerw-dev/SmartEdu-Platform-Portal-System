@@ -680,10 +680,19 @@ async function renderStudentDashboard() {
     const container = document.getElementById('student-classes-cards');
     if (!container) return;
 
+    // Safely retrieve and normalize user email to guarantee match against DB records
+    const activeUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const studentEmail = activeUser?.email ? activeUser.email.toLowerCase().trim() : (typeof currentUser !== 'undefined' && currentUser?.email ? currentUser.email.toLowerCase().trim() : null);
+
+    if (!studentEmail) {
+        container.innerHTML = `<p class="text-xs text-slate-500 italic py-4 text-center col-span-2">Please log in to view your classes.</p>`;
+        return;
+    }
+
     const { data: enrollments, error: enrollError } = await supabaseClient
         .from('enrollments')
         .select('class_code')
-        .eq('student_email', currentUser?.email);
+        .eq('student_email', studentEmail);
 
     if (enrollError || !enrollments || enrollments.length === 0) {
         container.innerHTML = `<p class="text-xs text-slate-500 italic py-4 text-center col-span-2">You haven't joined any classes yet. Enter a code above to get started.</p>`;
@@ -711,7 +720,7 @@ async function renderStudentDashboard() {
     const { data: submissions } = await supabaseClient
         .from('submissions')
         .select('*')
-        .eq('student_email', currentUser?.email);
+        .eq('student_email', studentEmail);
 
     // Fetch teacher profile details
     const teacherEmails = [...new Set(classes.map(c => c.teacher_email))];
@@ -722,131 +731,13 @@ async function renderStudentDashboard() {
 
     const teacherMap = {};
     if (teacherProfiles) {
-        teacherProfiles.forEach(t => { teacherMap[t.email] = t; });
+        teacherProfiles.forEach(t => { 
+            if (t.email) teacherMap[t.email.toLowerCase().trim()] = t; 
+        });
     }
 
     container.innerHTML = classes.map(c => {
-        const teacher = teacherMap[c.teacher_email] || {};
-        const logoUrl = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(teacher.school_logo_url) : null;
-        const classExams = exams ? exams.filter(e => e.class_code === c.class_code) : [];
-
-        return `
-            <div class="bg-slate-900/80 p-5 rounded-2xl border border-slate-700/80 space-y-4 shadow-xl flex flex-col justify-between">
-                <div class="space-y-4">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="space-y-1">
-                            <h4 class="font-bold text-white text-sm">${c.class_name || c.name || 'Class'}</h4>
-                            <p class="text-xs text-slate-400">${c.subject || ''}</p>
-                        </div>
-                        ${logoUrl ? `
-                            <div class="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950 p-1">
-                                <img src="${logoUrl}" 
-                                     alt="School Logo" 
-                                     class="w-full h-full object-contain rounded-lg"
-                                     onerror="this.onerror=null; this.parentElement.style.display='none';" />
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 space-y-1 text-xs">
-                        <p class="text-slate-300"><span class="text-slate-500">School:</span> ${teacher.school || 'N/A'} ${teacher.school_location ? `(${teacher.school_location})` : ''}</p>
-                        <p class="text-slate-300"><span class="text-slate-500">Teacher:</span> ${teacher.name || 'N/A'} ${teacher.position ? `(${teacher.position})` : ''}</p>
-                        <p class="text-slate-300"><span class="text-slate-500">Phone:</span> <span class="font-mono text-indigo-300">${teacher.phone || 'N/A'}</span></p>
-                        <p class="text-slate-300"><span class="text-slate-500">Email:</span> ${teacher.email || c.teacher_email}</p>
-                    </div>
-
-                    <div class="flex justify-between items-center bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                        <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Class Code:</span>
-                        <span class="font-mono font-bold text-indigo-400 text-sm">${c.class_code}</span>
-                    </div>
-                </div>
-
-                <!-- Live Stream & Student Exam Buttons -->
-                <div class="space-y-2 pt-2 border-t border-slate-800/80">
-                    <button onclick="window.startLiveStream('${c.class_code}', '${c.class_name || c.name}')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-md">
-                        <i data-lucide="video" class="w-4 h-4"></i> Join Live Class
-                    </button>
-
-                    ${classExams.map(ex => {
-                        const sub = submissions ? submissions.find(s => s.exam_id === ex.id) : null;
-                        if (sub) {
-                            return `
-                                <button onclick="window.viewStudentMarkingGuide(${ex.id})" class="w-full py-2 bg-emerald-950/50 hover:bg-emerald-900/50 border border-emerald-800/80 text-emerald-300 rounded-xl text-xs px-3 flex justify-between items-center font-semibold transition">
-                                    <span class="flex items-center gap-1.5"><i data-lucide="file-check" class="w-4 h-4 text-emerald-400"></i> ${ex.title}</span>
-                                    <span class="font-mono font-bold text-[11px] bg-emerald-900/80 px-2 py-0.5 rounded text-emerald-200">${sub.score_obtained}/${ex.total_marks} (${sub.percentage}%) - Guide</span>
-                                </button>
-                            `;
-                        } else {
-                            return `
-                                <button onclick="window.openStudentExam(${ex.id})" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition flex items-center justify-between px-3 shadow-md">
-                                    <span class="flex items-center gap-1.5"><i data-lucide="edit-3" class="w-4 h-4"></i> ${ex.title}</span>
-                                    <span class="bg-emerald-950/80 px-2 py-0.5 rounded text-[10px] text-emerald-200 border border-emerald-700/80">⏱️ ${ex.duration_minutes}m \vert{}${ex.total_marks} pts</span>
-                                </button>
-                            `;
-                        }
-                    }).join('')}
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    // Refresh Lucide icons after injecting HTML
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-    }
-}
-// Student Dashboard (with Report Card & Exam Sections)
-async function renderStudentDashboard() {
-    const container = document.getElementById('student-classes-cards');
-    if (!container) return;
-
-    const { data: enrollments, error: enrollError } = await supabaseClient
-        .from('enrollments')
-        .select('class_code')
-        .eq('student_email', currentUser?.email);
-
-    if (enrollError || !enrollments || enrollments.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-500 italic py-4 text-center col-span-2">You haven't joined any classes yet. Enter a code above to get started.</p>`;
-        return;
-    }
-
-    const classCodes = enrollments.map(e => e.class_code);
-
-    const { data: classes, error: classError } = await supabaseClient
-        .from('classes')
-        .select('*')
-        .in('class_code', classCodes);
-
-    if (classError || !classes || classes.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-500 italic py-4 text-center col-span-2">No matching classes found in database.</p>`;
-        return;
-    }
-
-    // Fetch active exams & student submissions
-    const { data: exams } = await supabaseClient
-        .from('exams')
-        .select('*')
-        .in('class_code', classCodes);
-
-    const { data: submissions } = await supabaseClient
-        .from('submissions')
-        .select('*')
-        .eq('student_email', currentUser?.email);
-
-    // Fetch teacher profile details
-    const teacherEmails = [...new Set(classes.map(c => c.teacher_email))];
-    const { data: teacherProfiles } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .in('email', teacherEmails);
-
-    const teacherMap = {};
-    if (teacherProfiles) {
-        teacherProfiles.forEach(t => { teacherMap[t.email] = t; });
-    }
-
-    container.innerHTML = classes.map(c => {
-        const teacher = teacherMap[c.teacher_email] || {};
+        const teacher = teacherMap[c.teacher_email?.toLowerCase().trim()] || {};
         const logoUrl = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(teacher.school_logo_url) : null;
         const classExams = exams ? exams.filter(e => e.class_code === c.class_code) : [];
 
@@ -862,15 +753,19 @@ async function renderStudentDashboard() {
             examsHtml = classExams.map(ex => {
                 const sub = submissions ? submissions.find(s => s.exam_id === ex.id) : null;
                 if (sub) {
-                    return `<button onclick="window.viewStudentMarkingGuide(${ex.id})" class="w-full py-2 bg-emerald-950/50 hover:bg-emerald-900/50 border border-emerald-800/80 text-emerald-300 rounded-xl text-xs px-3 flex justify-between items-center font-semibold transition">
-                        <span>📋 ${ex.title}</span>
-                        <span class="font-mono font-bold text-[11px] bg-emerald-900/80 px-2 py-0.5 rounded text-emerald-200">${sub.score_obtained}/${ex.total_marks} (${sub.percentage}%) - Guide</span>
-                    </button>`;
+                    return `
+                        <button onclick="window.viewStudentMarkingGuide(${ex.id})" class="w-full py-2 bg-emerald-950/50 hover:bg-emerald-900/50 border border-emerald-800/80 text-emerald-300 rounded-xl text-xs px-3 flex justify-between items-center font-semibold transition">
+                            <span class="flex items-center gap-1.5"><i data-lucide="file-check" class="w-4 h-4 text-emerald-400"></i> ${ex.title}</span>
+                            <span class="font-mono font-bold text-[11px] bg-emerald-900/80 px-2 py-0.5 rounded text-emerald-200">${sub.score_obtained}/${ex.total_marks} (${sub.percentage}%) - Guide</span>
+                        </button>
+                    `;
                 } else {
-                    return `<button onclick="window.openStudentExam(${ex.id})" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition flex items-center justify-between px-3 shadow-md">
-                        <span>✏️ ${ex.title}</span>
-                        <span class="bg-emerald-950/80 px-2 py-0.5 rounded text-[10px] text-emerald-200 border border-emerald-700/80">⏱️ ${ex.duration_minutes}m | ${ex.total_marks} pts</span>
-                    </button>`;
+                    return `
+                        <button onclick="window.openStudentExam(${ex.id})" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition flex items-center justify-between px-3 shadow-md">
+                            <span class="flex items-center gap-1.5"><i data-lucide="edit-3" class="w-4 h-4"></i> ${ex.title}</span>
+                            <span class="bg-emerald-950/80 px-2 py-0.5 rounded text-[10px] text-emerald-200 border border-emerald-700/80">⏱️ ${ex.duration_minutes}m | ${ex.total_marks} pts</span>
+                        </button>
+                    `;
                 }
             }).join('');
         }
@@ -933,6 +828,7 @@ async function renderStudentDashboard() {
         `;
     }).join('');
 
+    // Refresh Lucide icons after injecting HTML
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
         lucide.createIcons();
     }
