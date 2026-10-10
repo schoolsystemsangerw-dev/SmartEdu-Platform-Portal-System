@@ -948,7 +948,6 @@ window.discardExamDraft = function() {
         if (previewContainer) previewContainer.classList.add('hidden');
     }
 };
-
 // ==========================================
 // STUDENT EXAM TAKING & AI HUMAN-LIKE GRADING
 // ==========================================
@@ -982,14 +981,39 @@ window.openStudentExam = async function(examId) {
 
     lines.forEach((line, idx) => {
         const trimmed = line.trim();
-        const isHeader = trimmed.startsWith('#') || trimmed.startsWith('**CLASS') || trimmed.startsWith('**TIME') || trimmed.startsWith('---') || trimmed.startsWith('**Candidate');
+        
+        // Human-like intelligence check: Is this a title, instruction, or decorative line?
+        const upper = trimmed.toUpperCase();
+        const isMetadataOrHeader = 
+            upper.startsWith('#') || 
+            upper.startsWith('CLASS:') || 
+            upper.startsWith('SUBJECT:') || 
+            upper.startsWith('TIME ALLOWED') || 
+            upper.startsWith('READ THE FOLLOWING') || 
+            upper.startsWith('SECTION') ||
+            upper.startsWith('---') || 
+            upper.match(/^[-_]{3,}$/) || 
+            upper.includes('MINUTES') ||
+            upper.includes('HOURS');
 
-        if (isHeader) {
-            html += `<div class="text-slate-300 text-xs font-semibold py-1">${line.replace(/[\#\*\_]/g, '')}</div>`;
+        // Check if it's a student detail entry line (like Candidate's Name, School, Stream) or an actual numbered question
+        const isStudentDetailField = 
+            upper.includes('CANDIDATE') || 
+            upper.includes('NAME:') || 
+            upper.includes('SCHOOL NAME') || 
+            upper.includes('STREAM') || 
+            upper.includes('INDEX NO');
+
+        const isRealQuestion = /^\d+[\.\)]\s/.test(trimmed) || trimmed.includes('?') || isStudentDetailField;
+
+        if (isMetadataOrHeader && !isStudentDetailField) {
+            // Render purely as clean document text/headers without an input box
+            html += `<div class="text-slate-300 text-xs font-semibold py-1.5 px-1">${line.replace(/[\#\*\_]/g, '')}</div>`;
         } else {
+            // Render with an input text box for typing answers or details
             html += `
-                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                    <p class="text-xs font-bold text-white">${line}</p>
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 shadow-md">
+                    <p class="text-xs font-bold text-white">${line.replace(/[\*\_]/g, '')}</p>
                     <textarea name="q_${idx}" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:ring-1 focus:ring-emerald-500 outline-none" placeholder="Type your answer here..."></textarea>
                 </div>
             `;
@@ -1025,7 +1049,9 @@ window.submitStudentExam = async function(examId) {
     const formData = new FormData(form);
     const studentAnswers = {};
     for (let [key, value] of formData.entries()) {
-        studentAnswers[key] = value.trim();
+        if (value.trim() !== '') {
+            studentAnswers[key] = value.trim();
+        }
     }
 
     const modalBody = document.getElementById('exam-modal-body');
@@ -1050,7 +1076,7 @@ STUDENT ANSWERS PROVIDED:
 ${JSON.stringify(studentAnswers, null, 2)}
 
 Instructions for Grading:
-1. Think like a human teacher: understand student intent, forgive minor spelling mistakes or abbreviations, and look for correct conceptual understanding.
+1. Think like a human teacher: understand student intent, forgive minor spelling mistakes or abbreviations, and look for correct conceptual understanding. Ignore non-question header fields like names or school when scoring marks.
 2. Calculate an appropriate score out of ${exam.total_marks}.
 3. Generate a clean, formatted Marking Guide showing each question, the student's answer, whether it is correct/acceptable, the ideal model answer, and brief constructive teacher feedback.
 4. Output your response strictly in JSON format with this exact structure:
@@ -1129,7 +1155,7 @@ window.viewStudentMarkingGuide = async function(examId) {
     if (!modal) return;
 
     document.getElementById('exam-modal-title').innerText = `Marking Guide: ${exam.title}`;
-    document.getElementById('exam-modal-subtitle').innerText = `Score: ${sub.score_obtained} / ${exam.total_marks} (${sub.percentage}%)`;
+    document.getElementById('exam-modal-subtitle').innerText = `Score: ${sub.score_obtained} / ${sub.total_marks} (${sub.percentage}%)`;
     
     let parsedAnswers = {};
     try {
