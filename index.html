@@ -299,7 +299,7 @@
             </div>
         </div>
  </section>
-     <!-- TEACHER DASHBOARD -->
+  <!-- TEACHER DASHBOARD -->
 <section id="teacher-dashboard" class="hidden space-y-6 p-6">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         
@@ -361,98 +361,105 @@
         <!-- Right Main Workspace Column (Span 2) -->
         <div class="md:col-span-2 space-y-6">
             <!-- TEACHER EXAM PREVIEW & EDITOR PANEL (Initially Hidden) -->
-<div id="teacher-exam-preview-container" class="hidden bg-slate-800/60 border border-amber-500/40 rounded-3xl p-6 space-y-4">
-    <div class="flex items-center justify-between border-b border-slate-700 pb-3">
-        <div>
-            <h3 class="text-base font-bold text-white flex items-center gap-2">
-                <span>📝</span> Review & Edit Generated Exam
-            </h3>
-            <p class="text-slate-400 text-xs">Make adjustments to the questions or instructions below before publishing to your students.</p>
-        </div>
-        <span class="text-xs bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full font-medium border border-amber-500/30">Teacher Draft Mode</span>
-    </div>
+            <div id="teacher-exam-preview-container" class="hidden bg-slate-800/60 border border-amber-500/40 rounded-3xl p-6 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                    <div>
+                        <h3 class="text-base font-bold text-white flex items-center gap-2">
+                            <span>📝</span> Review & Edit Generated Exam
+                        </h3>
+                        <p class="text-slate-400 text-xs">Make adjustments to the questions or instructions below before publishing to your students.</p>
+                    </div>
+                    <span class="text-xs bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full font-medium border border-amber-500/30">Teacher Draft Mode</span>
+                </div>
 
-    <!-- Editable Exam Title -->
-    <div>
-        <label class="block text-[11px] font-bold text-slate-400 mb-1">Final Exam Title</label>
-        <input type="text" id="preview-exam-title" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white font-medium">
-    </div>
+                <!-- Editable Exam Title -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-400 mb-1">Final Exam Title</label>
+                    <input type="text" id="preview-exam-title" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white font-medium">
+                </div>
 
-    <!-- Editable Questions Area -->
-    <div>
-        <label class="block text-[11px] font-bold text-slate-400 mb-1">Exam Questions (Editable Text)</label>
-        <textarea id="preview-exam-content" rows="10" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 font-mono leading-relaxed focus:border-indigo-500 outline-none"></textarea>
-    </div>
+                <!-- Editable Questions Area -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-400 mb-1">Exam Questions (Editable Text)</label>
+                    <textarea id="preview-exam-content" rows="10" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 font-mono leading-relaxed focus:border-indigo-500 outline-none"></textarea>
+                </div>
 
-    <!-- Select Target Class to Publish -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center pt-2">
-        <div>
-            <label class="block text-[11px] font-bold text-slate-400 mb-1">Assign to Class</label>
-            <select id="target-class-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white">
-                <option value="">-- Select Enrolled Class --</option>
-                <!-- Populated dynamically from your classes list -->
-            </select>
-        </div>
-        <div class="flex gap-2 pt-4">
-            <button type="button" onclick="publishExamToClass()" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-1.5">
-                <span>🚀</span> Publish to Class
-            </button>
-            <button type="button" onclick="discardExamDraft()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium px-4 py-3 rounded-xl text-xs transition">
-                Discard
-            </button>
-        </div>
-    </div>
-</div>
+                <!-- Select Target Class to Publish -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center pt-2">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 mb-1">Assign to Class</label>
+                        <select id="target-class-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white">
+                            <option value="">-- Select Enrolled Class --</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-2 pt-4">
+                        <button type="button" onclick="publishExamToClass()" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-1.5">
+                            <span>🚀</span> Publish to Class
+                        </button>
+                        <button type="button" onclick="discardExamDraft()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium px-4 py-3 rounded-xl text-xs transition">
+                            Discard
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Teacher Classes Cards Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="teacher-classes-cards">
-                <!-- Rendered classes will automatically populate here -->
                 <div class="col-span-2 text-center py-12 text-slate-500 italic text-xs">
                     Loading your classes...
                 </div>
             </div>
-
-            <!-- Student Active Classes List -->
-            <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6">
-                <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                    <i data-lucide="graduation-cap" class="text-indigo-400"></i> My Enrolled Classes
-                </h3>
-                <div id="student-classes-cards" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <!-- Dynamic insertion from app.js -->
-                </div>
-            </div>
-
-            <!-- Student Exam View Container -->
-            <div id="student-exam-container" class="hidden bg-slate-800/60 border border-slate-700 rounded-3xl p-6">
-                <h3 id="student-exam-title" class="text-base font-bold text-white mb-4">Exam Portal</h3>
-                
-                <!-- Student Name Input -->
-                <div class="mb-4">
-                    <label class="block text-[11px] font-bold text-slate-400 mb-1">Your Full Name</label>
-                    <input type="text" id="student-name-input" placeholder="e.g., Uwimana Marie" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white">
-                </div>
-
-                <!-- Dynamic Questions Form rendered here -->
-                <form id="student-exam-form" class="space-y-4">
-                    <div id="questions-render-area" class="space-y-4">
-                        <!-- Questions load dynamically here -->
-                    </div>
-                    
-                    <button type="button" onclick="submitOnScreenExam()" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl text-xs transition shadow-lg">
-                        Submit Exam for AI Grading
-                    </button>
-                </form>
-
-                <!-- Student Score Result Box (Hidden until graded) -->
-                <div id="student-result-box" class="hidden mt-6 p-4 rounded-2xl bg-slate-900 border border-slate-700">
-                    <h4 class="text-sm font-bold text-emerald-400 mb-2">Exam Results & Feedback</h4>
-                    <p id="student-score-display" class="text-white text-xs font-bold mb-2"></p>
-                    <p id="student-feedback-display" class="text-slate-300 text-xs italic mb-4"></p>
-                    <div id="marking-guide-breakdown" class="space-y-2 text-xs text-slate-400"></div>
-                </div>
-            </div>
-
         </div>
 
+    </div>
+</section>
+
+<!-- SEPARATE STUDENT DASHBOARD SECTION -->
+<section id="student-dashboard" class="hidden space-y-6 p-6">
+    <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6 max-w-lg mx-auto mb-6">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <i data-lucide="key" class="text-indigo-400"></i> Join Classroom
+        </h3>
+        <form id="join-class-form" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1">Enter Class Code</label>
+                <input type="text" id="join-class-code" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-center font-mono uppercase tracking-widest text-sm focus:outline-none focus:border-indigo-500 mb-1" placeholder="E.G. ENG-5821" />
+            </div>
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-sm transition">
+                Join Class
+            </button>
+        </form>
+    </div>
+
+    <!-- Student Active Classes List -->
+    <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <i data-lucide="graduation-cap" class="text-indigo-400"></i> My Enrolled Classes
+        </h3>
+        <div id="student-classes-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[150px]">
+            <!-- Dynamic insertion from app.js -->
+        </div>
+    </div>
+
+    <!-- Student Exam View Container -->
+    <div id="student-exam-container" class="hidden bg-slate-800/60 border border-slate-700 rounded-3xl p-6 mt-6">
+        <h3 id="student-exam-title" class="text-base font-bold text-white mb-4">Exam Portal</h3>
+        <div class="mb-4">
+            <label class="block text-[11px] font-bold text-slate-400 mb-1">Your Full Name</label>
+            <input type="text" id="student-name-input" placeholder="e.g., Uwimana Marie" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white">
+        </div>
+        <form id="student-exam-form" class="space-y-4">
+            <div id="questions-render-area" class="space-y-4"></div>
+            <button type="button" onclick="submitOnScreenExam()" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl text-xs transition shadow-lg">
+                Submit Exam for AI Grading
+            </button>
+        </form>
+        <div id="student-result-box" class="hidden mt-6 p-4 rounded-2xl bg-slate-900 border border-slate-700">
+            <h4 class="text-sm font-bold text-emerald-400 mb-2">Exam Results & Feedback</h4>
+            <p id="student-score-display" class="text-white text-xs font-bold mb-2"></p>
+            <p id="student-feedback-display" class="text-slate-300 text-xs italic mb-4"></p>
+            <div id="marking-guide-breakdown" class="space-y-2 text-xs text-slate-400"></div>
+        </div>
     </div>
 </section>
        <!-- Head Teacher Dashboard View -->
