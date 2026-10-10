@@ -697,7 +697,10 @@ async function renderStudentDashboard() {
         .select('*')
         .in('class_code', classCodes);
 
-    if (classError || !classes || classes.length === 0) return;
+    if (classError || !classes || classes.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 italic py-4 text-center col-span-2">No matching classes found in database.</p>`;
+        return;
+    }
 
     // Fetch active exams & student submissions
     const { data: exams } = await supabaseClient
@@ -722,6 +725,7 @@ async function renderStudentDashboard() {
         teacherProfiles.forEach(t => { teacherMap[t.email] = t; });
     }
 
+    // FIX: Added .join('') at the end of classes.map so it renders correctly into HTML string
     container.innerHTML = classes.map(c => {
         const teacher = teacherMap[c.teacher_email] || {};
         const logoUrl = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(teacher.school_logo_url) : null;
@@ -777,12 +781,21 @@ async function renderStudentDashboard() {
                             return `
                                 <button onclick="window.openStudentExam(${ex.id})" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition flex items-center justify-between px-3 shadow-md">
                                     <span class="flex items-center gap-1.5"><i data-lucide="edit-3" class="w-4 h-4"></i> ${ex.title}</span>
-                                    <span class="bg-emerald-950/80 px-2 py-0.5 rounded text-[10px] text-emerald-200 border border-emerald-700/80">⏱️ ${ex.duration_minutes}m | ${ex.total_marks} pts</span>
+                                    <span class="bg-emerald-950/80 px-2 py-0.5 rounded text-[10px] text-emerald-200 border border-emerald-700/80">⏱️ ${ex.duration_minutes}m \vert{}${ex.total_marks} pts</span>
                                 </button>
                             `;
                         }
                     }).join('')}
+                </div>
+            </div>
+        `;
+    }).join(''); // <-- CRITICAL FIX: Joins the array of card strings into a single HTML string
 
+    // Refresh Lucide icons after injecting HTML
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
                     <!-- STUDENT REPORT CARD GENERATOR SECTION -->
                     <div class="mt-3 pt-3 border-t border-slate-800/80 space-y-2.5">
                         <h5 class="text-xs font-bold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider">
