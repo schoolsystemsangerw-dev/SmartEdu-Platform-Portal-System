@@ -336,8 +336,7 @@ function setupEventListeners() {
             renderTeacherDashboard();
         });
     }
-
-    // Student Join Class Form Handler (Safely inside setupEventListeners)
+// Student Join Class Form Handler (Safely inside setupEventListeners)
     const joinClassForm = document.getElementById('join-class-form');
     if (joinClassForm) {
         joinClassForm.addEventListener('submit', async (e) => {
@@ -369,20 +368,23 @@ function setupEventListeners() {
                 }]);
 
             if (enrollError) {
-                if (enrollError.code === '23505') {
-                    alert('You have already joined this class!');
+                if (enrollError.code === '23505' || enrollError.status === 409) {
+                    alert('You are already enrolled in this class!');
                 } else {
                     alert('Failed to join class: ' + enrollError.message);
+                    return;
                 }
-                return;
+            } else {
+                alert('Successfully joined ' + (classData.class_name || classCode) + '!');
             }
 
-            alert('Successfully joined ' + classData.class_name + '!');
             if (classCodeInput) classCodeInput.value = '';
-            renderStudentDashboard();
+            
+            if (typeof renderStudentDashboard === 'function') {
+                renderStudentDashboard();
+            }
         });
     }
-}
 // Universal Cross-Platform Live Classroom Engine
 window.startLiveStream = function(classCode, className) {
     const modal = document.getElementById('live-stream-modal');
