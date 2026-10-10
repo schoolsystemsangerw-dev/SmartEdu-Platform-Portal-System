@@ -530,7 +530,6 @@ async function renderTeacherDashboard() {
         `;
     }).join('');
 }
-
 // ==========================================
 // PART 4: STUDENT DASHBOARD & EXAMS
 // ==========================================
@@ -597,7 +596,7 @@ async function renderStudentDashboard() {
         let examsHtml = classExams.map(ex => {
             const sub = submissions ? submissions.find(s => s.exam_id === ex.id) : null;
             if (sub) {
-                return `<button onclick="window.viewStudentMarkingGuide(${ex.id})" class="w-full py-2 bg-emerald-950/50 border border-emerald-800 text-emerald-300 rounded-xl text-xs px-3 flex justify-between items-center font-semibold"><span>${ex.title}</span><span class="font-mono">${sub.score_obtained}/${ex.total_marks} (${sub.percentage}%)</span></button>`;
+                return `<button onclick="window.viewStudentMarkingGuide(${ex.id})" class="w-full py-2 bg-emerald-950/50 border border-emerald-800 text-emerald-300 rounded-xl text-xs px-3 flex justify-between items-center font-semibold"><span>${ex.title}</span><span class="font-mono">${sub.score_obtained}/${ex.total_marks} (${sub.percentage}%) - View Marking Guide</span></button>`;
             } else {
                 return `<button onclick="window.openStudentExam(${ex.id})" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs px-3 flex justify-between items-center shadow"><span>${ex.title}</span><span>⏱️ ${ex.duration_minutes}m</span></button>`;
             }
@@ -635,7 +634,7 @@ window.openCreateExamModal = function(classCode) {
                 <div><label class="block text-xs font-bold text-slate-400 mb-1">Duration (Min)</label><input type="number" id="exam-duration" value="30" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white"></div>
                 <div><label class="block text-xs font-bold text-slate-400 mb-1">Total Marks</label><input type="number" id="exam-total-marks" value="100" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white"></div>
             </div>
-            <div><label class="block text-xs font-bold text-slate-400 mb-1">Questions (Use {Answer} or [Opt A* | Opt B])</label><textarea id="exam-questions" rows="6" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white font-mono"></textarea></div>
+            <div><label class="block text-xs font-bold text-slate-400 mb-1">Questions</label><textarea id="exam-questions" rows="6" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white font-mono"></textarea></div>
         </form>
     `;
     document.getElementById('exam-modal-footer').innerHTML = `
@@ -755,6 +754,7 @@ async function renderHeadTeacherDashboard() {
         console.error('Error fetching dashboard data:', err);
     }
 }
+
 // AI Exam Generation Handler
 window.handleAIGenerateExam = async function() {
     console.log("Generate AI Exam button clicked.");
@@ -902,6 +902,7 @@ window.viewExamResults = async function(examId) {
     footer.innerHTML = `<button onclick="window.closeExamModal()" class="px-5 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Close</button>`;
     modal.classList.remove('hidden');
 };
+
 // Publish AI Generated Exam to Class
 window.publishExamToClass = async function() {
     const title = document.getElementById('preview-exam-title')?.value;
@@ -928,19 +929,16 @@ window.publishExamToClass = async function() {
             teacher_email: currentUser.email || 'schoolsystems.ange.rw@gmail.com'
         };
 
-        const { error } = await supabaseClient
-            .from('exams')
-            .insert([payload]);
-
+        const { error } = await supabaseClient.from('exams').insert([payload]);
         if (error) throw error;
 
-        alert("Exam successfully published to class! Students can now access it from their portal.");
+        alert("Exam successfully published to class!");
         const previewContainer = document.getElementById('teacher-exam-preview-container');
         if (previewContainer) previewContainer.classList.add('hidden');
         
     } catch (err) {
         console.error("Failed to publish exam:", err);
-        alert("Failed to publish exam to database: " + (err.message || 'Unknown error'));
+        alert("Failed to publish exam: " + (err.message || 'Unknown error'));
     }
 };
 
@@ -950,7 +948,11 @@ window.discardExamDraft = function() {
         if (previewContainer) previewContainer.classList.add('hidden');
     }
 };
-// Student Take Exam Modal Launcher
+
+// ==========================================
+// STUDENT EXAM TAKING & AI HUMAN-LIKE GRADING
+// ==========================================
+
 window.openStudentExam = async function(examId) {
     const { data: exam, error } = await supabaseClient
         .from('exams')
@@ -977,46 +979,34 @@ window.openStudentExam = async function(examId) {
     const lines = exam.questions.split('\n').filter(l => l.trim() !== '');
     
     let html = `<form id="student-exam-form" class="space-y-4">`;
+
     lines.forEach((line, idx) => {
-        html += `<div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">`;
-        if (line.includes('[') && line.includes(']')) {
-            const qText = line.split('[')[0].trim();
-            const rawOptions = line.substring(line.indexOf('[') + 1, line.indexOf(']')).split('|');
-            
-            html += `<p class="text-xs font-bold text-white">${qText}</p><div class="space-y-1 mt-2">`;
-            rawOptions.forEach(opt => {
-                const cleanOpt = opt.replace('*', '').trim();
-                html += `
-                    <label class="flex items-center gap-2 text-xs text-slate-300 p-2 bg-slate-900 rounded-lg border border-slate-800 cursor-pointer hover:bg-slate-800">
-                        <input type="radio" name="q_${idx}" value="${cleanOpt}" class="text-indigo-600">
-                        ${cleanOpt}
-                    </label>
-                `;
-            });
-            html += `</div>`;
-        } else if (line.includes('{') && line.includes('}')) {
-            const qText = line.replace(/\{([^}]+)\}/g, '_____');
-            html += `
-                <p class="text-xs font-bold text-white">${qText}</p>
-                <input type="text" name="q_${idx}" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-white mt-2" placeholder="Type your answer here...">
-            `;
+        const trimmed = line.trim();
+        const isHeader = trimmed.startsWith('#') || trimmed.startsWith('**CLASS') || trimmed.startsWith('**TIME') || trimmed.startsWith('---') || trimmed.startsWith('**Candidate');
+
+        if (isHeader) {
+            html += `<div class="text-slate-300 text-xs font-semibold py-1">${line.replace(/[\#\*\_]/g, '')}</div>`;
         } else {
-            html += `<p class="text-xs font-bold text-white">${line}</p>`;
+            html += `
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+                    <p class="text-xs font-bold text-white">${line}</p>
+                    <textarea name="q_${idx}" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:ring-1 focus:ring-emerald-500 outline-none" placeholder="Type your answer here..."></textarea>
+                </div>
+            `;
         }
-        html += `</div>`;
     });
+
     html += `</form>`;
 
     body.innerHTML = html;
     footer.innerHTML = `
         <button onclick="window.closeExamModal()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Cancel</button>
-        <button onclick="window.submitStudentExam(${exam.id})" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-lg">Submit Answers</button>
+        <button onclick="window.submitStudentExam(${exam.id})" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-lg">Submit & Grade with AI 🤖</button>
     `;
 
     modal.classList.remove('hidden');
 };
 
-// Student Auto-Grading Submission Handler
 window.submitStudentExam = async function(examId) {
     const form = document.getElementById('student-exam-form');
     if (!form) return;
@@ -1032,47 +1022,66 @@ window.submitStudentExam = async function(examId) {
         return;
     }
 
-    const lines = exam.questions.split('\n').filter(l => l.trim() !== '');
-    let totalQuestions = lines.length;
-    let correctCount = 0;
+    const formData = new FormData(form);
     const studentAnswers = {};
+    for (let [key, value] of formData.entries()) {
+        studentAnswers[key] = value.trim();
+    }
 
-    lines.forEach((line, idx) => {
-        let expectedAnswer = "";
-        let studentAnswer = "";
+    const modalBody = document.getElementById('exam-modal-body');
+    if (modalBody) {
+        modalBody.innerHTML = `
+            <div class="text-center py-16 space-y-4">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent"></div>
+                <p class="text-sm font-bold text-white">Gemini Teacher is reviewing and grading answers...</p>
+                <p class="text-xs text-slate-400">Evaluating context, ignoring minor spelling typos, and compiling your marking guide.</p>
+            </div>
+        `;
+    }
 
-        if (line.includes('[') && line.includes(']')) {
-            const rawOptions = line.substring(line.indexOf('[') + 1, line.indexOf(']')).split('|');
-            const correctOpt = rawOptions.find(o => o.includes('*'));
-            if (correctOpt) expectedAnswer = correctOpt.replace('*', '').trim().toLowerCase();
+    try {
+        const promptText = `
+You are an expert primary/secondary school teacher and examiner. Grade the following student submission for the exam titled "${exam.title}" (Total Marks: ${exam.total_marks}).
 
-            const selectedRadio = form.querySelector(`input[name="q_${idx}"]:checked`);
-            if (selectedRadio) studentAnswer = selectedRadio.value.trim().toLowerCase();
-        } else if (line.includes('{') && line.includes('}')) {
-            const match = line.match(/\{([^}]+)\}/);
-            if (match) expectedAnswer = match[1].trim().toLowerCase();
+EXAM QUESTIONS:
+${exam.questions}
 
-            const textInput = form.querySelector(`input[name="q_${idx}"]`);
-            if (textInput) studentAnswer = textInput.value.trim().toLowerCase();
-        }
+STUDENT ANSWERS PROVIDED:
+${JSON.stringify(studentAnswers, null, 2)}
 
-        studentAnswers[`q_${idx}`] = studentAnswer;
-        if (studentAnswer && expectedAnswer && studentAnswer === expectedAnswer) {
-            correctCount++;
-        }
-    });
+Instructions for Grading:
+1. Think like a human teacher: understand student intent, forgive minor spelling mistakes or abbreviations, and look for correct conceptual understanding.
+2. Calculate an appropriate score out of ${exam.total_marks}.
+3. Generate a clean, formatted Marking Guide showing each question, the student's answer, whether it is correct/acceptable, the ideal model answer, and brief constructive teacher feedback.
+4. Output your response strictly in JSON format with this exact structure:
+{
+  "score_obtained": number,
+  "percentage": number,
+  "marking_guide_html": "HTML formatted breakdown showing each question, student answer, status badge (Correct/Incorrect), and teacher remarks."
+}
+        `;
 
-    const pointsPerQuestion = exam.total_marks / (totalQuestions || 1);
-    const scoreObtained = Math.round(correctCount * pointsPerQuestion);
-    const percentage = Math.round((scoreObtained / exam.total_marks) * 100);
+        const apiKeyInput = document.getElementById('geminiApiKeyInput');
+        const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
 
-    const activeUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const studentEmail = activeUser?.email || 'student@smartedu.rw';
-    const studentName = activeUser?.name || activeUser?.full_name || 'Student';
+        const { data, error: fnError } = await supabaseClient.functions.invoke('generate-exam', {
+            body: { promptText, apiKey }
+        });
 
-    const { error: subError } = await supabaseClient
-        .from('submissions')
-        .insert([{
+        if (fnError) throw new Error(fnError.message);
+
+        const aiResponseText = data?.choices?.[0]?.message?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text || "{}";
+        const cleanJsonStr = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const gradingResult = JSON.parse(cleanJsonStr);
+
+        const scoreObtained = gradingResult.score_obtained || 0;
+        const percentage = gradingResult.percentage || Math.round((scoreObtained / exam.total_marks) * 100);
+
+        const activeUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const studentEmail = activeUser?.email || 'student@smartedu.rw';
+        const studentName = activeUser?.name || activeUser?.full_name || 'Student';
+
+        await supabaseClient.from('submissions').insert([{
             exam_id: examId,
             student_email: studentEmail,
             student_name: studentName,
@@ -1081,12 +1090,28 @@ window.submitStudentExam = async function(examId) {
             answers: JSON.stringify(studentAnswers)
         }]);
 
-    if (subError) {
-        alert("Error submitting exam: " + subError.message);
-    } else {
-        alert(`Exam submitted successfully! Score: ${scoreObtained}/${exam.total_marks} (${percentage}%)`);
+        document.getElementById('exam-modal-title').innerText = `AI Marking Guide: ${exam.title}`;
+        document.getElementById('exam-modal-subtitle').innerText = `Final Score: ${scoreObtained} / ${exam.total_marks} (${percentage}%)`;
+        
+        modalBody.innerHTML = `
+            <div class="space-y-4">
+                <div class="p-4 rounded-xl text-center font-bold ${percentage >= 50 ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800' : 'bg-rose-950/60 text-rose-300 border border-rose-800'}">
+                    <p class="text-sm">Exam Graded Successfully by Gemini Teacher!</p>
+                </div>
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs space-y-3">
+                    ${gradingResult.marking_guide_html}
+                </div>
+            </div>
+        `;
+
+        document.getElementById('exam-modal-footer').innerHTML = `
+            <button onclick="window.closeExamModal(); renderStudentDashboard();" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold">Done</button>
+        `;
+
+    } catch (err) {
+        console.error("AI Grading failed:", err);
+        alert("AI grading error: " + err.message);
         window.closeExamModal();
-        renderStudentDashboard();
     }
 };
 
@@ -1099,5 +1124,28 @@ window.viewStudentMarkingGuide = async function(examId) {
         alert("Could not load marking guide.");
         return;
     }
-    alert(`Marking Guide - Score: ${sub.score_obtained}/${exam.total_marks} (${sub.percentage}%)`);
+
+    const modal = document.getElementById('exam-modal');
+    if (!modal) return;
+
+    document.getElementById('exam-modal-title').innerText = `Marking Guide: ${exam.title}`;
+    document.getElementById('exam-modal-subtitle').innerText = `Score: ${sub.score_obtained} / ${exam.total_marks} (${sub.percentage}%)`;
+    
+    let parsedAnswers = {};
+    try {
+        parsedAnswers = typeof sub.answers === 'string' ? JSON.parse(sub.answers) : (sub.answers || {});
+    } catch(e) {}
+
+    document.getElementById('exam-modal-body').innerHTML = `
+        <div class="space-y-3 bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs">
+            <p class="font-bold text-emerald-400">Your Submitted Answers:</p>
+            <pre class="text-slate-300 whitespace-pre-wrap font-mono">${JSON.stringify(parsedAnswers, null, 2)}</pre>
+        </div>
+    `;
+
+    document.getElementById('exam-modal-footer').innerHTML = `
+        <button onclick="window.closeExamModal()" class="px-5 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Close</button>
+    `;
+
+    modal.classList.contains('hidden') && modal.classList.remove('hidden');
 };
