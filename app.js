@@ -2563,8 +2563,8 @@ async function publishExamToClass() {
         const payload = {
             title: title,
             exam_title: title,
-            content: content,
-            class_code: classCode, // Matches Supabase schema column
+            questions: content, // Updated to match Supabase schema column 'questions'
+            class_code: classCode, 
             teacher_email: currentUser.email || 'mwesigwaelias@gmail.com'
         };
 
