@@ -674,48 +674,76 @@ async function renderStudentDashboard() {
     const container = document.getElementById('student-classes-cards');
     if (!container) return;
 
+    if (!currentUser || !currentUser.email) {
+        console.warn("renderStudentDashboard: currentUser or email is not loaded yet.");
+        return;
+    }
+
+    const studentEmail = currentUser.email.toLowerCase().trim();
+
+    // 1. Fetch enrollments for the current student
     const { data: enrollments, error: enrollError } = await supabaseClient
         .from('enrollments')
         .select('class_code')
-        .eq('student_email', currentUser?.email);
+        .eq('student_email', studentEmail);
 
-    if (enrollError || !enrollments || enrollments.length === 0) {
+    if (enrollError) {
+        console.error("Error fetching enrollments:", enrollError);
+        container.innerHTML = `<p class="text-xs text-red-400 italic py-4 text-center col-span-2">Error loading enrollments: ${enrollError.message}</p>`;
+        return;
+    }
+
+    if (!enrollments || enrollments.length === 0) {
         container.innerHTML = `<p class="text-xs text-slate-500 italic py-4 text-center col-span-2">You haven't joined any classes yet. Enter a code above to get started.</p>`;
         return;
     }
 
     const classCodes = enrollments.map(e => e.class_code);
 
+    // 2. Fetch class details matching the joined class codes
     const { data: classes, error: classError } = await supabaseClient
         .from('classes')
         .select('*')
         .in('class_code', classCodes);
 
-    if (classError || !classes || classes.length === 0) return;
+    if (classError) {
+        console.error("Error fetching classes:", classError);
+        return;
+    }
 
-    // Fetch active exams & student submissions
-    const { data: exams } = await supabaseClient
+    if (!classes || classes.length === 0) {
+        console.warn("Enrollments found, but no matching classes found for codes:", classCodes);
+        container.innerHTML = `<p class="text-xs text-amber-400 italic py-4 text-center col-span-2">Enrolled class records found, but class details could not be loaded.</p>`;
+        return;
+    }
+
+    // 3. Fetch active exams & student submissions
+    const { data: exams, error: examError } = await supabaseClient
         .from('exams')
         .select('*')
         .in('class_code', classCodes);
+    if (examError) console.error("Error fetching exams:", examError);
 
-    const { data: submissions } = await supabaseClient
+    const { data: submissions, error: subError } = await supabaseClient
         .from('submissions')
         .select('*')
-        .eq('student_email', currentUser?.email);
+        .eq('student_email', studentEmail);
+    if (subError) console.error("Error fetching submissions:", subError);
 
-    // Fetch teacher profile details
+    // 4. Fetch teacher profile details
     const teacherEmails = [...new Set(classes.map(c => c.teacher_email))];
-    const { data: teacherProfiles } = await supabaseClient
+    const { data: teacherProfiles, error: profError } = await supabaseClient
         .from('profiles')
         .select('*')
         .in('email', teacherEmails);
+    if (profError) console.error("Error fetching teacher profiles:", profError);
 
     const teacherMap = {};
     if (teacherProfiles) {
         teacherProfiles.forEach(t => { teacherMap[t.email] = t; });
     }
 
+    // 5. Render class cards to the UI
     container.innerHTML = classes.map(c => {
         const teacher = teacherMap[c.teacher_email] || {};
         const logoUrl = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(teacher.school_logo_url) : null;
@@ -752,6 +780,35 @@ async function renderStudentDashboard() {
                     </div>
                 </div>
 
+                <!-- Live Stream & Student Exam Buttons -->
+                <div class="space-y-2 pt-2 border-t border-slate-800/80">
+                    <button onclick="window.startLiveStream('${c.class_code}', '${c.class_name || c.name}')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-md">
+                        <i data-lucide="video" class="w-4 h-4"></i> Join Live Class
+                    </button>
+
+                    ${classExams.map(ex => {
+                        const sub = submissions ? submissions.find(s => s.exam_id === ex.id) : null;
+                        if (sub) {
+                            return `
+                                <button onclick="window.viewStudentMarkingGuide(${ex.id})" class="w-full py-2 bg-emerald-950/50 hover:bg-emerald-900/50 border border-emerald-800/80 text-emerald-300 rounded-xl text-xs px-3 flex justify-between items-center font-semibold transition">
+                                    <span class="flex items-center gap-1.5"><i data-lucide="file-check" class="w-4 h-4 text-emerald-400"></i> ${ex.title}</span>
+                                    <span class="font-mono font-bold text-[11px] bg-emerald-900/80 px-2 py-0.5 rounded text-emerald-200">${sub.score_obtained}/${ex.total_marks} (${sub.percentage}%) - Guide</span>
+                                </button>
+                            `;
+                        } else {
+                            return `
+                                <button onclick="window.openStudentExam(${ex.id})" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition flex items-center justify-between px-3 shadow-md">
+                                    <span class="flex items-center gap-1.5"><i data-lucide="edit-3" class="w-4 h-4"></i> ${ex.title}</span>
+                                    <span class="bg-emerald-950/80 px-2 py-0.5 rounded text-[10px] text-emerald-200 border border-emerald-700/80">⏱️ ${ex.duration_minutes}m \vert{}${ex.total_marks} pts</span>
+                                </button>
+                            `;
+                        }
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
                 <!-- Live Stream & Student Exam Buttons -->
                 <div class="space-y-2 pt-2 border-t border-slate-800/80">
                     <button onclick="window.startLiveStream('${c.class_code}', '${c.class_name || c.name}')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-md">
