@@ -795,69 +795,147 @@ async function renderStudentDashboard() {
         lucide.createIcons();
     }
 }
-<!-- STUDENT REPORT CARD GENERATOR SECTION -->
+// Student Dashboard (with Report Card & Exam Sections)
+async function renderStudentDashboard() {
+    const container = document.getElementById('student-classes-cards');
+    if (!container) return;
+
+    const { data: enrollments, error: enrollError } = await supabaseClient
+        .from('enrollments')
+        .select('class_code')
+        .eq('student_email', currentUser?.email);
+
+    if (enrollError || !enrollments || enrollments.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 italic py-4 text-center col-span-2">You haven't joined any classes yet. Enter a code above to get started.</p>`;
+        return;
+    }
+
+    const classCodes = enrollments.map(e => e.class_code);
+
+    const { data: classes, error: classError } = await supabaseClient
+        .from('classes')
+        .select('*')
+        .in('class_code', classCodes);
+
+    if (classError || !classes || classes.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 italic py-4 text-center col-span-2">No matching classes found in database.</p>`;
+        return;
+    }
+
+    // Fetch active exams & student submissions
+    const { data: exams } = await supabaseClient
+        .from('exams')
+        .select('*')
+        .in('class_code', classCodes);
+
+    const { data: submissions } = await supabaseClient
+        .from('submissions')
+        .select('*')
+        .eq('student_email', currentUser?.email);
+
+    // Fetch teacher profile details
+    const teacherEmails = [...new Set(classes.map(c => c.teacher_email))];
+    const { data: teacherProfiles } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .in('email', teacherEmails);
+
+    const teacherMap = {};
+    if (teacherProfiles) {
+        teacherProfiles.forEach(t => { teacherMap[t.email] = t; });
+    }
+
+    container.innerHTML = classes.map(c => {
+        const teacher = teacherMap[c.teacher_email] || {};
+        const logoUrl = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(teacher.school_logo_url) : null;
+        const classExams = exams ? exams.filter(e => e.class_code === c.class_code) : [];
+
+        let logoHtml = '';
+        if (logoUrl) {
+            logoHtml = `<div class="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950 p-1">
+                <img src="${logoUrl}" alt="School Logo" class="w-full h-full object-contain rounded-lg" onerror="this.onerror=null; this.parentElement.style.display='none';" />
+            </div>`;
+        }
+
+        let examsHtml = '';
+        if (classExams && classExams.length > 0) {
+            examsHtml = classExams.map(ex => {
+                const sub = submissions ? submissions.find(s => s.exam_id === ex.id) : null;
+                if (sub) {
+                    return `<button onclick="window.viewStudentMarkingGuide(${ex.id})" class="w-full py-2 bg-emerald-950/50 hover:bg-emerald-900/50 border border-emerald-800/80 text-emerald-300 rounded-xl text-xs px-3 flex justify-between items-center font-semibold transition">
+                        <span>📋 ${ex.title}</span>
+                        <span class="font-mono font-bold text-[11px] bg-emerald-900/80 px-2 py-0.5 rounded text-emerald-200">${sub.score_obtained}/${ex.total_marks} (${sub.percentage}%) - Guide</span>
+                    </button>`;
+                } else {
+                    return `<button onclick="window.openStudentExam(${ex.id})" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition flex items-center justify-between px-3 shadow-md">
+                        <span>✏️ ${ex.title}</span>
+                        <span class="bg-emerald-950/80 px-2 py-0.5 rounded text-[10px] text-emerald-200 border border-emerald-700/80">⏱️ ${ex.duration_minutes}m | ${ex.total_marks} pts</span>
+                    </button>`;
+                }
+            }).join('');
+        }
+
+        return `
+            <div class="bg-slate-900/80 p-5 rounded-2xl border border-slate-700/80 space-y-4 shadow-xl flex flex-col justify-between">
+                <div class="space-y-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="space-y-1">
+                            <h4 class="font-bold text-white text-sm">${c.class_name || c.name || 'Class'}</h4>
+                            <p class="text-xs text-slate-400">${c.subject || ''}</p>
+                        </div>
+                        ${logoHtml}
+                    </div>
+
+                    <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 space-y-1 text-xs">
+                        <p class="text-slate-300"><span class="text-slate-500">School:</span> ${teacher.school || 'N/A'} ${teacher.school_location ? `(${teacher.school_location})` : ''}</p>
+                        <p class="text-slate-300"><span class="text-slate-500">Teacher:</span> ${teacher.name || 'N/A'} ${teacher.position ? `(${teacher.position})` : ''}</p>
+                        <p class="text-slate-300"><span class="text-slate-500">Phone:</span> <span class="font-mono text-indigo-300">${teacher.phone || 'N/A'}</span></p>
+                        <p class="text-slate-300"><span class="text-slate-500">Email:</span> ${teacher.email || c.teacher_email}</p>
+                    </div>
+
+                    <div class="flex justify-between items-center bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Class Code:</span>
+                        <span class="font-mono font-bold text-indigo-400 text-sm">${c.class_code}</span>
+                    </div>
+                </div>
+
+                <!-- Live Stream, Exams & Report Card Section -->
+                <div class="space-y-2 pt-2 border-t border-slate-800/80">
+                    <button onclick="window.startLiveStream('${c.class_code}', '${c.class_name || c.name}')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-md">
+                        🎥 Join Live Class
+                    </button>
+                    ${examsHtml}
+
+                    <!-- Student Report Card Generator Section -->
                     <div class="mt-3 pt-3 border-t border-slate-800/80 space-y-2.5">
-                        <h5 class="text-xs font-bold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider">
+                        <h5 class="text-xs font-bold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wide">
                             <i data-lucide="award" class="w-3.5 h-3.5 text-emerald-400"></i> My Report Card
                         </h5>
-
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="block text-[10px] text-slate-400 font-medium mb-1">Academic Year</label>
-                                <select id="studentReportYear_${c.class_code}" class="w-full bg-slate-950 border border-slate-800 text-white rounded-lg p-1.5 text-xs focus:ring-1 focus:ring-emerald-500 outline-none">
+                                <select id="studentReportYear_${c.class_code}" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white">
                                     <option value="2026" selected>2026</option>
-                                    <option value="2025">2025</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-[10px] text-slate-400 font-medium mb-1">Term</label>
-                                <select id="studentReportTerm_${c.class_code}" class="w-full bg-slate-950 border border-slate-800 text-white rounded-lg p-1.5 text-xs focus:ring-1 focus:ring-emerald-500 outline-none">
+                                <select id="studentReportTerm_${c.class_code}" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white">
                                     <option value="Term 1">Term 1</option>
                                     <option value="Term 2">Term 2</option>
                                     <option value="Term 3" selected>Term 3</option>
                                 </select>
                             </div>
                         </div>
-
-                        <button onclick="downloadMyReportCard('${c.class_code}', '${c.class_name || c.name || 'Class'}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-md">
-                            <i data-lucide="download" class="w-3.5 h-3.5"></i> Download My Report Card (PDF)
-                        </button>
                     </div>
                 </div>
             </div>
         `;
     }).join('');
 
-    if (window.lucide) lucide.createIcons();
-}
-
-// Student self-service PDF report downloader function
-async function downloadMyReportCard(classCode, className) {
-    const termSelect = document.getElementById(`studentReportTerm_${classCode}`);
-    const yearSelect = document.getElementById(`studentReportYear_${classCode}`);
-
-    const selectedTerm = termSelect ? termSelect.value : 'Term 3';
-    const selectedYear = yearSelect ? yearSelect.value : '2026';
-    const studentName = currentUser?.name || currentUser?.full_name || 'Student';
-
-    const { data: marks, error } = await supabaseClient
-        .from('student_marks')
-        .select('subject_name, marks_obtained, max_marks')
-        .eq('student_email', currentUser?.email)
-        .eq('term', selectedTerm)
-        .eq('academic_year', selectedYear);
-
-    if (error || !marks || marks.length === 0) {
-        alert(`No marks recorded for ${selectedTerm} (${selectedYear}).`);
-        return;
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
     }
-
-    await generateReportCard(studentName, className, marks, {
-        name: currentUser?.school || "SMARTEDU ACADEMY",
-        location: currentUser?.school_location || "NYAGATARE",
-        term: selectedTerm,
-        year: selectedYear
-    });
 }
 // Open Exam Creation Modal for Teachers
 window.openCreateExamModal = function(classCode) {
