@@ -76,6 +76,9 @@ async function checkSession() {
         if (dbUser) {
             currentUser = dbUser;
             Session.setUser(dbUser);
+            window.currentUser = dbUser; // Keep window global synced
+        } else {
+            window.currentUser = currentUser;
         }
 
         if (userBadge) {
@@ -103,11 +106,13 @@ async function checkSession() {
             showRoleDashboard(currentUser.role);
         }
     } else {
+        window.currentUser = null;
         if (userBadge) userBadge.classList.add('hidden');
         if (logoutBtn) logoutBtn.classList.add('hidden');
         showAuthSection();
     }
 }
+
 // Navigation Controls
 function hideAllSections() {
     ['auth-section', 'owner-dashboard', 'head-teacher-dashboard', 'teacher-dashboard', 'student-dashboard'].forEach(id => {
@@ -125,10 +130,7 @@ function showAuthSection() {
 function showRoleDashboard(role) {
     hideAllSections();
     
-  // Get actual logged-in user role from session to prevent mismatched calls
-    const activeUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
-    
-    // Force usage of the session/storage role first, fallback only if completely missing
+    const activeUser = Session.getUser() || window.currentUser || JSON.parse(localStorage.getItem('currentUser') || '{}');
     const actualRole = activeUser && activeUser.role ? activeUser.role : (typeof role !== 'undefined' ? role : '');
 
     if (actualRole === 'owner') {
@@ -150,162 +152,14 @@ function showRoleDashboard(role) {
     } else if (actualRole === 'student') {
         const studentDb = document.getElementById('student-dashboard');
         if (studentDb) studentDb.classList.remove('hidden');
-        if (typeof renderStudentDashboard === 'function') renderStudentDashboard();
-    }
-}
-// Auth UI Navigation
-function setupAuthTabs() {
-    const tabLogin = document.getElementById('tab-login');
-    const tabRegister = document.getElementById('tab-register');
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-    const roleSelect = document.getElementById('reg-role');
-    const teacherFields = document.getElementById('teacher-fields');
-
-    if (tabLogin && tabRegister) {
-        tabLogin.addEventListener('click', () => {
-            tabLogin.className = 'flex-1 py-2 text-xs font-bold rounded-xl transition bg-indigo-600 text-white shadow-md';
-            tabRegister.className = 'flex-1 py-2 text-xs font-bold text-slate-400 hover:text-white transition';
-            if (loginForm) loginForm.classList.remove('hidden');
-            if (registerForm) registerForm.classList.add('hidden');
-        });
-
-        tabRegister.addEventListener('click', () => {
-            tabRegister.className = 'flex-1 py-2 text-xs font-bold rounded-xl transition bg-indigo-600 text-white shadow-md';
-            tabLogin.className = 'flex-1 py-2 text-xs font-bold text-slate-400 hover:text-white transition';
-            if (registerForm) registerForm.classList.remove('hidden');
-            if (loginForm) loginForm.classList.add('hidden');
-        });
-    }
-
-    if (roleSelect && teacherFields) {
-        roleSelect.addEventListener('change', (e) => {
-            const role = e.target.value;
-            if (role === 'teacher' || role === 'head-teacher') {
-                teacherFields.classList.remove('hidden');
-                const posSelect = document.getElementById('reg-position');
-                if (posSelect) {
-                    posSelect.value = (role === 'head-teacher') ? 'Head Teacher' : 'Teacher';
-                }
-            } else {
-                teacherFields.classList.add('hidden');
-            }
-        });
-    }
-}
-
-// Event Listeners & Form Handlers
-function setupEventListeners() {
-    // Registration Handler
-    const registerForm = document.getElementById('register-form');
-    if (registerForm) {
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const role = document.getElementById('reg-role')?.value || '';
-            const name = document.getElementById('reg-name')?.value || '';
-            const email = document.getElementById('reg-email')?.value || '';
-            const phone = document.getElementById('reg-phone')?.value || '';
-            const password = document.getElementById('reg-password')?.value || '';
-
-            if (!email || !name) {
-                alert('Please enter your name and email address.');
-                return;
-            }
-
-            const { data: existingUser } = await supabaseClient
-                .from('profiles')
-                .select('email')
-                .eq('email', email)
-                .maybeSingle();
-
-            if (existingUser) {
-                alert('An account with this email already exists.');
-                return;
-            }
-
-            const isStaff = (role === 'teacher' || role === 'head-teacher');
-            const rawLogoUrl = isStaff ? (document.getElementById('reg-school-logo')?.value || '') : '';
-            const finalRole = email.toLowerCase() === MASTER_ADMIN_EMAIL ? 'owner' : role;
-
-            const newUser = {
-                role: finalRole,
-                name: name,
-                full_name: name,
-                email: email,
-                phone: phone,
-                phone_number: phone,
-                password: password,
-                account_status: isStaff ? 'pending' : 'active',
-                school: isStaff ? (document.getElementById('reg-school')?.value || '') : '',
-                school_location: isStaff ? (document.getElementById('reg-school-location')?.value || '') : '',
-                position: isStaff ? (document.getElementById('reg-position')?.value || '') : '',
-                school_logo_url: typeof getDirectImageUrl === 'function' ? getDirectImageUrl(rawLogoUrl) : rawLogoUrl,
-                payment_ref: isStaff ? (document.getElementById('reg-payment-ref')?.value || '') : ''
-            };
-
-            const { data: insertedData, error } = await supabaseClient
-                .from('profiles')
-                .insert([newUser])
-                .select();
-
-            if (error) {
-                alert('Registration failed: ' + error.message);
-                return;
-            }
-
-            const savedProfile = (insertedData && insertedData[0]) ? insertedData[0] : newUser;
-
-            localStorage.setItem('currentUser', JSON.stringify(savedProfile));
-            localStorage.setItem('user', JSON.stringify(savedProfile));
-            window.currentUserProfile = savedProfile;
-
-            if (isStaff) {
-                alert('Staff/Head Teacher account registered! Pending payment approval by System Owner.');
-            } else {
-                alert('Account created successfully! You can now log in.');
-            }
-
-            registerForm.reset();
-            document.getElementById('tab-login')?.click();
-        });
-    }
-
-  // Login Handler
-const loginForm = document.getElementById('login-form');
-if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-
-        const { data: user, error } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('email', email)
-            .eq('password', password)
-            .maybeSingle();
-
-        if (error || !user) {
-            alert('Invalid email or password.');
-            return;
-        }
-
-        if ((user.role === 'teacher' || user.role === 'head-teacher') && user.account_status === 'pending') {
-            alert('Your account is pending payment verification by the System Owner. Please contact schoolsystems.ange.rw@gmail.com.');
-            return;
-        }
-
-        Session.setUser(user);
-        window.currentUser = user; // <-- Ensures global availability for dashboard rendering
-        checkSession();
-
-        // FIX: Force render student dashboard upon successful login
+        
+        // Give the browser 200ms to paint the unhidden dashboard before rendering cards
         setTimeout(() => {
             if (typeof renderStudentDashboard === 'function') {
                 renderStudentDashboard();
             }
-        }, 150);
-    });
+        }, 200);
+    }
 }
     // Logout Handler
     const logoutBtn = document.getElementById('logout-btn');
