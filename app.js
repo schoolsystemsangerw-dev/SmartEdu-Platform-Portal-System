@@ -949,7 +949,7 @@ window.discardExamDraft = function() {
     }
 };
 // ==========================================
-// STUDENT EXAM TAKING & AI HUMAN-LIKE GRADING
+// STUDENT EXAM TAKING & AI HUMAN-LIKE PARSING & GRADING
 // ==========================================
 
 window.openStudentExam = async function(examId) {
@@ -975,203 +975,72 @@ window.openStudentExam = async function(examId) {
     title.innerText = exam.title;
     subtitle.innerText = `Duration: ${exam.duration_minutes} Mins | Total Marks: ${exam.total_marks}`;
 
-    const lines = exam.questions.split('\n').filter(l => l.trim() !== '');
-    
-    let html = `<form id="student-exam-form" class="space-y-4">`;
-
-    lines.forEach((line, idx) => {
-        const trimmed = line.trim();
-        
-        // Human-like intelligence check: Is this a title, instruction, or decorative line?
-        const upper = trimmed.toUpperCase();
-        const isMetadataOrHeader = 
-            upper.startsWith('#') || 
-            upper.startsWith('CLASS:') || 
-            upper.startsWith('SUBJECT:') || 
-            upper.startsWith('TIME ALLOWED') || 
-            upper.startsWith('READ THE FOLLOWING') || 
-            upper.startsWith('SECTION') ||
-            upper.startsWith('---') || 
-            upper.match(/^[-_]{3,}$/) || 
-            upper.includes('MINUTES') ||
-            upper.includes('HOURS');
-
-        // Check if it's a student detail entry line (like Candidate's Name, School, Stream) or an actual numbered question
-        const isStudentDetailField = 
-            upper.includes('CANDIDATE') || 
-            upper.includes('NAME:') || 
-            upper.includes('SCHOOL NAME') || 
-            upper.includes('STREAM') || 
-            upper.includes('INDEX NO');
-
-        const isRealQuestion = /^\d+[\.\)]\s/.test(trimmed) || trimmed.includes('?') || isStudentDetailField;
-
-        if (isMetadataOrHeader && !isStudentDetailField) {
-            // Render purely as clean document text/headers without an input box
-            html += `<div class="text-slate-300 text-xs font-semibold py-1.5 px-1">${line.replace(/[\#\*\_]/g, '')}</div>`;
-        } else {
-            // Render with an input text box for typing answers or details
-            html += `
-                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 shadow-md">
-                    <p class="text-xs font-bold text-white">${line.replace(/[\*\_]/g, '')}</p>
-                    <textarea name="q_${idx}" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:ring-1 focus:ring-emerald-500 outline-none" placeholder="Type your answer here..."></textarea>
-                </div>
-            `;
-        }
-    });
-
-    html += `</form>`;
-
-    body.innerHTML = html;
-    footer.innerHTML = `
-        <button onclick="window.closeExamModal()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Cancel</button>
-        <button onclick="window.submitStudentExam(${exam.id})" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-lg">Submit & Grade with AI 🤖</button>
+    // Show a human-like loading state while Gemini parses the document
+    body.innerHTML = `
+        <div class="text-center py-16 space-y-3">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent"></div>
+            <p class="text-xs font-bold text-white">Gemini Teacher is analyzing and structuring the exam layout...</p>
+            <p class="text-xs text-slate-400">Separating instructions and headers from actual questions.</p>
+        </div>
     `;
-
     modal.classList.remove('hidden');
-};
-
-window.submitStudentExam = async function(examId) {
-    const form = document.getElementById('student-exam-form');
-    if (!form) return;
-
-    const { data: exam, error } = await supabaseClient
-        .from('exams')
-        .select('*')
-        .eq('id', examId)
-        .single();
-
-    if (error || !exam) {
-        alert("Failed to evaluate exam.");
-        return;
-    }
-
-    const formData = new FormData(form);
-    const studentAnswers = {};
-    for (let [key, value] of formData.entries()) {
-        if (value.trim() !== '') {
-            studentAnswers[key] = value.trim();
-        }
-    }
-
-    const modalBody = document.getElementById('exam-modal-body');
-    if (modalBody) {
-        modalBody.innerHTML = `
-            <div class="text-center py-16 space-y-4">
-                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent"></div>
-                <p class="text-sm font-bold text-white">Gemini Teacher is reviewing and grading answers...</p>
-                <p class="text-xs text-slate-400">Evaluating context, ignoring minor spelling typos, and compiling your marking guide.</p>
-            </div>
-        `;
-    }
 
     try {
-        const promptText = `
-You are an expert primary/secondary school teacher and examiner. Grade the following student submission for the exam titled "${exam.title}" (Total Marks: ${exam.total_marks}).
+        const parsePrompt = `
+You are an expert exam parser and school teacher. Analyze the following raw exam text. 
+Separate all headers, class metadata, rules, instructions, and decorative lines from the actual graded questions. 
+Return your response STRICTLY as a JSON array of objects with this exact format:
+[
+  { "type": "instruction", "text": "CLASS: PRIMARY FIVE" },
+  { "type": "instruction", "text": "1. This paper consists of two sections: Section A and Section B." },
+  { "type": "question", "text": "1. Name the compass point that lies midway between North and East." }
+]
+Classify anything that requires a student to write an answer or solve a problem as a "question", and everything else (headers, instructions, rules, names fields) as an "instruction".
 
-EXAM QUESTIONS:
+RAW EXAM TEXT:
 ${exam.questions}
-
-STUDENT ANSWERS PROVIDED:
-${JSON.stringify(studentAnswers, null, 2)}
-
-Instructions for Grading:
-1. Think like a human teacher: understand student intent, forgive minor spelling mistakes or abbreviations, and look for correct conceptual understanding. Ignore non-question header fields like names or school when scoring marks.
-2. Calculate an appropriate score out of ${exam.total_marks}.
-3. Generate a clean, formatted Marking Guide showing each question, the student's answer, whether it is correct/acceptable, the ideal model answer, and brief constructive teacher feedback.
-4. Output your response strictly in JSON format with this exact structure:
-{
-  "score_obtained": number,
-  "percentage": number,
-  "marking_guide_html": "HTML formatted breakdown showing each question, student answer, status badge (Correct/Incorrect), and teacher remarks."
-}
         `;
 
         const apiKeyInput = document.getElementById('geminiApiKeyInput');
         const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
 
         const { data, error: fnError } = await supabaseClient.functions.invoke('generate-exam', {
-            body: { promptText, apiKey }
+            body: { promptText: parsePrompt, apiKey }
         });
 
         if (fnError) throw new Error(fnError.message);
 
-        const aiResponseText = data?.choices?.[0]?.message?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text || "{}";
+        const aiResponseText = data?.choices?.[0]?.message?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text || "[]";
         const cleanJsonStr = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const gradingResult = JSON.parse(cleanJsonStr);
+        const examElements = JSON.parse(cleanJsonStr);
 
-        const scoreObtained = gradingResult.score_obtained || 0;
-        const percentage = gradingResult.percentage || Math.round((scoreObtained / exam.total_marks) * 100);
+        let html = `<form id="student-exam-form" class="space-y-4">`;
 
-        const activeUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
-        const studentEmail = activeUser?.email || 'student@smartedu.rw';
-        const studentName = activeUser?.name || activeUser?.full_name || 'Student';
+        examElements.forEach((el, idx) => {
+            if (el.type === 'instruction') {
+                // Render as clean readable text without input box
+                html += `<div class="text-slate-300 text-xs font-medium py-1.5 px-1">${el.text.replace(/[\#\*\_]/g, '')}</div>`;
+            } else {
+                // Render with an input text box for actual questions
+                html += `
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 shadow-md">
+                        <p class="text-xs font-bold text-white">${el.text.replace(/[\*\_]/g, '')}</p>
+                        <textarea name="q_${idx}" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:ring-1 focus:ring-emerald-500 outline-none" placeholder="Type your answer here..."></textarea>
+                    </div>
+                `;
+            }
+        });
 
-        await supabaseClient.from('submissions').insert([{
-            exam_id: examId,
-            student_email: studentEmail,
-            student_name: studentName,
-            score_obtained: scoreObtained,
-            percentage: percentage,
-            answers: JSON.stringify(studentAnswers)
-        }]);
+        html += `</form>`;
+        body.innerHTML = html;
 
-        document.getElementById('exam-modal-title').innerText = `AI Marking Guide: ${exam.title}`;
-        document.getElementById('exam-modal-subtitle').innerText = `Final Score: ${scoreObtained} / ${exam.total_marks} (${percentage}%)`;
-        
-        modalBody.innerHTML = `
-            <div class="space-y-4">
-                <div class="p-4 rounded-xl text-center font-bold ${percentage >= 50 ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800' : 'bg-rose-950/60 text-rose-300 border border-rose-800'}">
-                    <p class="text-sm">Exam Graded Successfully by Gemini Teacher!</p>
-                </div>
-                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs space-y-3">
-                    ${gradingResult.marking_guide_html}
-                </div>
-            </div>
-        `;
-
-        document.getElementById('exam-modal-footer').innerHTML = `
-            <button onclick="window.closeExamModal(); renderStudentDashboard();" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold">Done</button>
+        footer.innerHTML = `
+            <button onclick="window.closeExamModal()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Cancel</button>
+            <button onclick="window.submitStudentExam(${exam.id})" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-lg">Submit & Grade with AI 🤖</button>
         `;
 
     } catch (err) {
-        console.error("AI Grading failed:", err);
-        alert("AI grading error: " + err.message);
-        window.closeExamModal();
+        console.error("Failed to parse exam with AI:", err);
+        body.innerHTML = `<p class="text-rose-400 text-center py-6 text-xs">Failed to load exam layout: ${err.message}</p>`;
     }
-};
-
-window.viewStudentMarkingGuide = async function(examId) {
-    const activeUser = Session.getUser() || JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const { data: exam } = await supabaseClient.from('exams').select('*').eq('id', examId).single();
-    const { data: sub } = await supabaseClient.from('submissions').select('*').eq('exam_id', examId).eq('student_email', activeUser?.email).single();
-
-    if (!exam || !sub) {
-        alert("Could not load marking guide.");
-        return;
-    }
-
-    const modal = document.getElementById('exam-modal');
-    if (!modal) return;
-
-    document.getElementById('exam-modal-title').innerText = `Marking Guide: ${exam.title}`;
-    document.getElementById('exam-modal-subtitle').innerText = `Score: ${sub.score_obtained} / ${sub.total_marks} (${sub.percentage}%)`;
-    
-    let parsedAnswers = {};
-    try {
-        parsedAnswers = typeof sub.answers === 'string' ? JSON.parse(sub.answers) : (sub.answers || {});
-    } catch(e) {}
-
-    document.getElementById('exam-modal-body').innerHTML = `
-        <div class="space-y-3 bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs">
-            <p class="font-bold text-emerald-400">Your Submitted Answers:</p>
-            <pre class="text-slate-300 whitespace-pre-wrap font-mono">${JSON.stringify(parsedAnswers, null, 2)}</pre>
-        </div>
-    `;
-
-    document.getElementById('exam-modal-footer').innerHTML = `
-        <button onclick="window.closeExamModal()" class="px-5 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Close</button>
-    `;
-
-    modal.classList.contains('hidden') && modal.classList.remove('hidden');
 };
