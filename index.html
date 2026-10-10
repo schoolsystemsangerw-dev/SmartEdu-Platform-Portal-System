@@ -606,32 +606,34 @@
         </div>
     </div>
 </div>
-  <!-- STUDENT DASHBOARD -->
-        <section id="student-dashboard" class="hidden space-y-6">
-            <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6 max-w-lg mx-auto mb-6">
-                <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                    <i data-lucide="key" class="text-indigo-400"></i> Join Classroom
-                </h3>
-                <form id="join-class-form" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">Enter Class Code</label>
-                        <input type="text" id="join-class-code" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-center font-mono uppercase tracking-widest text-sm focus:outline-none focus:border-indigo-500 mb-1" placeholder="E.G. ENG-5821" />
-                    </div>
-                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-sm transition">
-                        Join Class
-                    </button>
-                </form>
+ <!-- STUDENT DASHBOARD -->
+<section id="student-dashboard" class="hidden space-y-6">
+    <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6 max-w-lg mx-auto mb-6">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <i data-lucide="key" class="text-indigo-400"></i> Join Classroom
+        </h3>
+        <form id="join-class-form" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1">Enter Class Code</label>
+                <input type="text" id="join-class-code" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-center font-mono uppercase tracking-widest text-sm focus:outline-none focus:border-indigo-500 mb-1" placeholder="E.G. ENG-5821" />
             </div>
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-sm transition">
+                Join Class
+            </button>
+        </form>
+    </div>
 
-            <!-- Student Active Classes List -->
-            <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6">
-                <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                    <i data-lucide="graduation-cap" class="text-indigo-400"></i> My Enrolled Classes
-                </h3>
-                <div id="student-classes-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Dynamic insertion from app.js -->
-                </div>
-            </div>
+    <!-- Student Active Classes List -->
+    <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <i data-lucide="graduation-cap" class="text-indigo-400"></i> My Enrolled Classes
+        </h3>
+        <!-- Added min-h-[150px] to preserve grid layout space -->
+        <div id="student-classes-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[150px]">
+            <!-- Dynamic insertion from app.js -->
+        </div>
+    </div>
+</section> 
             <!-- REPORT CARD GENERATOR SECTION -->
 <div class="bg-slate-800/60 border border-slate-700 rounded-3xl p-6 mt-6">
   <h3 class="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2">
