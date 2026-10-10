@@ -975,27 +975,36 @@ window.openStudentExam = async function(examId) {
     title.innerText = exam.title;
     subtitle.innerText = `Duration: ${exam.duration_minutes} Mins | Total Marks: ${exam.total_marks}`;
 
-    // Show a human-like loading state while Gemini parses the document
+    // Human-like loading state
     body.innerHTML = `
         <div class="text-center py-16 space-y-3">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent"></div>
-            <p class="text-xs font-bold text-white">Gemini Teacher is analyzing and structuring the exam layout...</p>
-            <p class="text-xs text-slate-400">Separating instructions and headers from actual questions.</p>
+            <p class="text-xs font-bold text-white">Gemini Teacher is analyzing exam structure & sub-parts...</p>
+            <p class="text-xs text-slate-400">Separating instructions, breaking down (a), (b), (c), and formatting reference maps.</p>
         </div>
     `;
     modal.classList.remove('hidden');
 
     try {
         const parsePrompt = `
-You are an expert exam parser and school teacher. Analyze the following raw exam text. 
-Separate all headers, class metadata, rules, instructions, and decorative lines from the actual graded questions. 
+You are an expert primary/secondary school head teacher and psychometric exam designer with human-like understanding. Analyze the following raw exam text. 
+
+CRITICAL RULES:
+1. SECURITY: If the text contains a "MARKING GUIDE", "MARKING SCHEME", or answer key anywhere, completely discard and exclude it. Students must never see answers!
+2. SUB-PARTS BREAKDOWN: If a question contains sub-parts like (a), (b), (c) or (i), (ii), (iii), DO NOT group them into one. Break them down into separate individual question objects in the JSON array so each sub-part gets its own answer box.
+3. METADATA: Identify fields like Candidate's Name, Index No., or School Name and classify them as "metadata".
+4. DIAGRAMS & MAPS: If there is a sketch map description or diagram text, classify it as "diagram".
+5. INSTRUCTIONS: Classify headers, class info, time allowed, and section rules as "instruction".
+6. QUESTIONS: Classify actual graded test items as "question".
+
 Return your response STRICTLY as a JSON array of objects with this exact format:
 [
   { "type": "instruction", "text": "CLASS: PRIMARY FIVE" },
-  { "type": "instruction", "text": "1. This paper consists of two sections: Section A and Section B." },
-  { "type": "question", "text": "1. Name the compass point that lies midway between North and East." }
+  { "type": "metadata", "text": "Candidate’s Name:" },
+  { "type": "diagram", "text": "Study the sketch map of Uganda below..." },
+  { "type": "question", "text": "41. (a) Name the lake marked L." },
+  { "type": "question", "text": "41. (b) State the physical feature labeled Mt. Rwenzori." }
 ]
-Classify anything that requires a student to write an answer or solve a problem as a "question", and everything else (headers, instructions, rules, names fields) as an "instruction".
 
 RAW EXAM TEXT:
 ${exam.questions}
@@ -1018,10 +1027,22 @@ ${exam.questions}
 
         examElements.forEach((el, idx) => {
             if (el.type === 'instruction') {
-                // Render as clean readable text without input box
                 html += `<div class="text-slate-300 text-xs font-medium py-1.5 px-1">${el.text.replace(/[\#\*\_]/g, '')}</div>`;
+            } else if (el.type === 'metadata') {
+                html += `
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5 shadow-sm">
+                        <p class="text-xs font-bold text-indigo-300">${el.text.replace(/[\*\_]/g, '')}</p>
+                        <input type="text" name="meta_${idx}" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none" placeholder="Enter your details here...">
+                    </div>
+                `;
+            } else if (el.type === 'diagram') {
+                html += `
+                    <div class="bg-slate-900/90 p-4 rounded-xl border border-indigo-500/40 space-y-2 shadow-inner my-2">
+                        <p class="text-[10px] uppercase font-bold text-indigo-400 tracking-wider">🗺️ Map / Diagram Reference</p>
+                        <pre class="text-xs text-slate-200 whitespace-pre-wrap font-mono bg-slate-950 p-3 rounded-lg border border-slate-800">${el.text}</pre>
+                    </div>
+                `;
             } else {
-                // Render with an input text box for actual questions
                 html += `
                     <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 shadow-md">
                         <p class="text-xs font-bold text-white">${el.text.replace(/[\*\_]/g, '')}</p>
