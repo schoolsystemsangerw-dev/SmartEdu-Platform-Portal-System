@@ -1010,13 +1010,30 @@ ${exam.questions}
         const apiKeyInput = document.getElementById('geminiApiKeyInput');
         const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
 
-        const { data, error: fnError } = await supabaseClient.functions.invoke('generate-exam', {
-            body: { promptText: parsePrompt, apiKey }
+        if (!apiKey) {
+            throw new Error("Gemini API Key is missing. Please enter your API key in the portal.");
+        }
+
+        // Direct client-side fetch to Gemini API, bypassing Supabase Edge Functions
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: parsePrompt }]
+                }]
+            })
         });
 
-        if (fnError) throw new Error(fnError.message);
+        const data = await response.json();
 
-        const aiResponseText = data?.choices?.[0]?.message?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text || "[]";
+        if (!response.ok) {
+            throw new Error(data.error?.message || "Google AI API request rejected.");
+        }
+
+        const aiResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
         const cleanJsonStr = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
         const examElements = JSON.parse(cleanJsonStr);
 
