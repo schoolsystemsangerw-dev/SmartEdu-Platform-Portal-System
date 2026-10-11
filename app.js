@@ -979,28 +979,31 @@ window.openStudentExam = async function(examId) {
     body.innerHTML = `
         <div class="text-center py-16 space-y-3">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent"></div>
-            <p class="text-xs font-bold text-white">Gemini Teacher is analyzing and reasoning through the exam content...</p>
-            <p class="text-xs text-slate-400">Comprehending text, structure, math, science, and layouts with human-like understanding.</p>
+            <p class="text-xs font-bold text-white">Gemini Teacher is analyzing exam structure & sub-parts...</p>
+            <p class="text-xs text-slate-400">Separating instructions, breaking down (a), (b), (c), and formatting reference maps.</p>
         </div>
     `;
     modal.classList.remove('hidden');
 
     try {
         const parsePrompt = `
-You are an expert head teacher and master curriculum editor. Read and comprehend the following raw exam text with complete human-like intelligence across all subjects (Mathematics, Sciences, Humanities, Languages).
+You are an expert primary/secondary school head teacher and psychometric exam designer with human-like understanding. Analyze the following raw exam text. 
 
-CORE OBJECTIVES:
-1. SECURITY & INTEGRITY: Completely discard any "MARKING GUIDE", "MARKING SCHEME", or answer key. Students must never see answers.
-2. AUTONOMOUS COMPREHENSION: Think and understand like an experienced educator. Intelligently recognize and parse math fractions, equations, chemical/physical expressions, diagrams, instructions, student metadata fields, and test questions seamlessly without needing rigid formatting rules.
-3. GRANULAR SUB-PART UNPACKING: If any question contains nested sub-parts (such as a, b, c or i, ii, iii), autonomously unpack them so each individual sub-part becomes its own independent question item with its own answer box.
-4. INTELLIGENT REFINEMENT: Clean up any OCR artifacts, typos, or messy line breaks from raw PDF/document uploads so the final presentation is pristine and professional.
+CRITICAL RULES:
+1. SECURITY: If the text contains a "MARKING GUIDE", "MARKING SCHEME", or answer key anywhere, completely discard and exclude it. Students must never see answers!
+2. SUB-PARTS BREAKDOWN: If a question contains sub-parts like (a), (b), (c) or (i), (ii), (iii), DO NOT group them into one. Break them down into separate individual question objects in the JSON array so each sub-part gets its own answer box.
+3. METADATA: Identify fields like Candidate's Name, Index No., or School Name and classify them as "metadata".
+4. DIAGRAMS & MAPS: If there is a sketch map description or diagram text, classify it as "diagram".
+5. INSTRUCTIONS: Classify headers, class info, time allowed, and section rules as "instruction".
+6. QUESTIONS: Classify actual graded test items as "question".
 
-Return your response STRICTLY as a JSON array of objects following this exact structure:
+Return your response STRICTLY as a JSON array of objects with this exact format:
 [
   { "type": "instruction", "text": "CLASS: PRIMARY FIVE" },
   { "type": "metadata", "text": "Candidate’s Name:" },
-  { "type": "diagram", "text": "Cleaned description or layout of the map/diagram..." },
-  { "type": "question", "text": "10. (a) Work out: 13/15 + 2/15" }
+  { "type": "diagram", "text": "Study the sketch map of Uganda below..." },
+  { "type": "question", "text": "41. (a) Name the lake marked L." },
+  { "type": "question", "text": "41. (b) State the physical feature labeled Mt. Rwenzori." }
 ]
 
 RAW EXAM TEXT:
@@ -1008,33 +1011,15 @@ ${exam.questions}
         `;
 
         const apiKeyInput = document.getElementById('geminiApiKeyInput');
-        let apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+        const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
 
-        // Fallback to ensure valid authentication
-        if (!apiKey) {
-            apiKey = "AQ.Ab8RN6JRa24ZcKanXrpsEQIAhGqok6QVRNhz1iJtTSEiRxYaw";
-        }
-
-        // Direct client-side fetch to Gemini API, bypassing Supabase Edge Functions
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: parsePrompt }]
-                }]
-            })
+        const { data, error: fnError } = await supabaseClient.functions.invoke('generate-exam', {
+            body: { promptText: parsePrompt, apiKey }
         });
 
-        const data = await response.json();
+        if (fnError) throw new Error(fnError.message);
 
-        if (!response.ok) {
-            throw new Error(data.error?.message || "Google AI API request rejected.");
-        }
-
-        const aiResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+        const aiResponseText = data?.choices?.[0]?.message?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text || "[]";
         const cleanJsonStr = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
         const examElements = JSON.parse(cleanJsonStr);
 
@@ -1053,7 +1038,7 @@ ${exam.questions}
             } else if (el.type === 'diagram') {
                 html += `
                     <div class="bg-slate-900/90 p-4 rounded-xl border border-indigo-500/40 space-y-2 shadow-inner my-2">
-                        <p class="text-[10px] uppercase font-bold text-indigo-400 tracking-wider">🗺️ Reference Diagram / Map</p>
+                        <p class="text-[10px] uppercase font-bold text-indigo-400 tracking-wider">🗺️ Map / Diagram Reference</p>
                         <pre class="text-xs text-slate-200 whitespace-pre-wrap font-mono bg-slate-950 p-3 rounded-lg border border-slate-800">${el.text}</pre>
                     </div>
                 `;
