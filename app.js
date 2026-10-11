@@ -798,28 +798,26 @@ async function extractTextFromFile(fileInput) {
     return `[Uploaded Document: ${file.name}]`;
 }
 
-// UPDATED: Routes through secure Vercel Serverless Function using Gemini API
+// UPDATED: Routes securely through Supabase Edge Functions (Unified Ecosystem)
 async function callGeminiAPI(promptText) {
-    const response = await fetch('https://smartedu-platform-porta-lsystem.vercel.app/api/generate-exam', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ promptText })
+    const { data, error } = await supabaseClient.functions.invoke('generate-exam', {
+        body: { promptText }
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.error || "Failed to generate exam via Vercel backend.");
+    if (error) {
+        throw new Error(error.message || JSON.stringify(error));
+    }
+    if (data && data.error) {
+        throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
     }
 
-    if (!data.content) {
+    const textResult = data?.content;
+    if (!textResult) {
         throw new Error("No response content received from AI.");
     }
 
     // Strips code blocks if returned wrapped in markdown
-    const cleanText = data.content.replace(/```json/g, '').replace(/```/g, '').trim();
+    const cleanText = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
     return cleanText;
 }
 
@@ -857,7 +855,6 @@ async function populateTargetClassDropdown() {
         console.error("Failed to load classes:", err);
     }
 }
-
 // Teacher View Exam Results Modal
 window.viewExamResults = async function(examId) {
     const modal = document.getElementById('exam-modal');
