@@ -798,20 +798,29 @@ async function extractTextFromFile(fileInput) {
     return `[Uploaded Document: ${file.name}]`;
 }
 
+// UPDATED: Routes through secure Vercel Serverless Function without key exposures
 async function callChatGPTAPI(promptText) {
-    const apiKeyInput = document.getElementById('geminiApiKeyInput');
-    const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-
-    const { data, error } = await supabaseClient.functions.invoke('generate-exam', {
-        body: { promptText, apiKey }
+    const response = await fetch('/api/generate-exam', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ promptText })
     });
 
-    if (error) throw new Error(error.message || JSON.stringify(error));
-    if (data && data.error) throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+    const data = await response.json();
 
-    const textResult = data?.choices?.[0]?.message?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text;
-    if (!textResult) throw new Error("No response content received from AI.");
-    return textResult;
+    if (!response.ok) {
+        throw new Error(data.error || "Failed to generate exam via Vercel backend.");
+    }
+
+    if (!data.content) {
+        throw new Error("No response content received from AI.");
+    }
+
+    // Strips code blocks if returned wrapped in markdown
+    const cleanText = data.content.replace(/```json/g, '').replace(/```/g, '').trim();
+    return cleanText;
 }
 
 async function handleExamGeneratedSuccess(examTitle, rawQuestionsText) {
@@ -1010,16 +1019,21 @@ RAW EXAM TEXT:
 ${exam.questions}
         `;
 
-        const apiKeyInput = document.getElementById('geminiApiKeyInput');
-        const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-
-        const { data, error: fnError } = await supabaseClient.functions.invoke('generate-exam', {
-            body: { promptText: parsePrompt, apiKey }
+        // UPDATED: Calls secure Vercel serverless function directly without exposing client-side API keys
+        const response = await fetch('/api/generate-exam', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ promptText: parsePrompt })
         });
 
-        if (fnError) throw new Error(fnError.message);
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || "Failed to parse exam layout via Vercel backend.");
+        }
 
-        const aiResponseText = data?.choices?.[0]?.message?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text || "[]";
+        const aiResponseText = data.content || "[]";
         const cleanJsonStr = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
         const examElements = JSON.parse(cleanJsonStr);
 
