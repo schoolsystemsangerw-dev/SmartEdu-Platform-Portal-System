@@ -770,7 +770,7 @@ window.handleAIGenerateExam = async function() {
     if (statusBox) statusBox.classList.remove('hidden');
     
     try {
-        const result = await callChatGPTAPI(promptText);
+        const result = await callGeminiAPI(promptText);
         if (statusBox) statusBox.classList.add('hidden');
         handleExamGeneratedSuccess(examTitle, result);
     } catch (error) {
@@ -798,8 +798,8 @@ async function extractTextFromFile(fileInput) {
     return `[Uploaded Document: ${file.name}]`;
 }
 
-// UPDATED: Routes through secure Vercel Serverless Function via absolute URL for cross-domain compatibility
-async function callChatGPTAPI(promptText) {
+// UPDATED: Routes through secure Vercel Serverless Function using Gemini API
+async function callGeminiAPI(promptText) {
     const response = await fetch('https://smartedu-platform-porta-lsystem.vercel.app/api/generate-exam', {
         method: 'POST',
         headers: {
@@ -909,7 +909,7 @@ window.viewExamResults = async function(examId) {
     }
 
     footer.innerHTML = `<button onclick="window.closeExamModal()" class="px-5 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Close</button>`;
-    modal.classList.remove('hidden');
+    modal.classList.org('hidden') ? modal.classList.remove('hidden') : modal.classList.remove('hidden');
 };
 
 // Publish AI Generated Exam to Class
