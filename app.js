@@ -798,26 +798,33 @@ async function extractTextFromFile(fileInput) {
     return `[Uploaded Document: ${file.name}]`;
 }
 
-// UPDATED: Routes securely through Supabase Edge Functions (Unified Ecosystem)
+// UPDATED: Directly fetches Supabase Edge Function to avoid SDK header mismatches
 async function callGeminiAPI(promptText) {
-    const { data, error } = await supabaseClient.functions.invoke('generate-exam', {
-        body: { promptText }
+    const supabaseUrl = "https://ggiwmwinxrkqceqnqz.supabase.co";
+    const functionUrl = `${supabaseUrl}/functions/v1/generate-exam`;
+    const anonKey = supabaseClient.supabaseKey;
+
+    const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${anonKey}`
+        },
+        body: JSON.stringify({ promptText })
     });
 
-    if (error) {
-        throw new Error(error.message || JSON.stringify(error));
-    }
-    if (data && data.error) {
-        throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.error || "Failed to generate exam via Supabase Edge Function.");
     }
 
-    const textResult = data?.content;
-    if (!textResult) {
+    if (!data.content) {
         throw new Error("No response content received from AI.");
     }
 
     // Strips code blocks if returned wrapped in markdown
-    const cleanText = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
+    const cleanText = data.content.replace(/```json/g, '').replace(/```/g, '').trim();
     return cleanText;
 }
 
