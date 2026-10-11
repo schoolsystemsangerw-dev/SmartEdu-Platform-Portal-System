@@ -754,7 +754,6 @@ async function renderHeadTeacherDashboard() {
         console.error('Error fetching dashboard data:', err);
     }
 }
-
 // AI Exam Generation Handler
 window.handleAIGenerateExam = async function() {
     console.log("Generate AI Exam button clicked.");
@@ -770,7 +769,7 @@ window.handleAIGenerateExam = async function() {
     if (statusBox) statusBox.classList.remove('hidden');
     
     try {
-        const result = await callChatGPTAPI(promptText);
+        const result = await callGeminiAPI(promptText);
         if (statusBox) statusBox.classList.add('hidden');
         handleExamGeneratedSuccess(examTitle, result);
     } catch (error) {
@@ -798,20 +797,20 @@ async function extractTextFromFile(fileInput) {
     return `[Uploaded Document: ${file.name}]`;
 }
 
-async function callChatGPTAPI(promptText) {
-    const apiKeyInput = document.getElementById('geminiApiKeyInput');
-    const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-
+// Unified Supabase Edge Function Bridge for Gemini
+async function callGeminiAPI(promptText) {
     const { data, error } = await supabaseClient.functions.invoke('generate-exam', {
-        body: { promptText, apiKey }
+        body: { promptText }
     });
 
     if (error) throw new Error(error.message || JSON.stringify(error));
     if (data && data.error) throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
 
-    const textResult = data?.choices?.[0]?.message?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text;
+    const textResult = data?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text;
     if (!textResult) throw new Error("No response content received from AI.");
-    return textResult;
+    
+    const cleanText = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
+    return cleanText;
 }
 
 async function handleExamGeneratedSuccess(examTitle, rawQuestionsText) {
@@ -948,10 +947,8 @@ window.discardExamDraft = function() {
         if (previewContainer) previewContainer.classList.add('hidden');
     }
 };
-// ==========================================
-// STUDENT EXAM TAKING & AI HUMAN-LIKE PARSING & GRADING
-// ==========================================
 
+// STUDENT EXAM TAKING & AI HUMAN-LIKE PARSING & GRADING
 window.openStudentExam = async function(examId) {
     const { data: exam, error } = await supabaseClient
         .from('exams')
@@ -973,9 +970,8 @@ window.openStudentExam = async function(examId) {
     if (!modal) return;
 
     title.innerText = exam.title;
-    subtitle.innerText = `Duration: ${exam.duration_minutes} Mins | Total Marks: ${exam.total_marks}`;
+    subtitle.innerText = `Duration: ${exam.duration_minutes || 60} Mins | Total Marks: ${exam.total_marks || 100}`;
 
-    // Human-like loading state
     body.innerHTML = `
         <div class="text-center py-16 space-y-3">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent"></div>
@@ -1010,17 +1006,7 @@ RAW EXAM TEXT:
 ${exam.questions}
         `;
 
-        const apiKeyInput = document.getElementById('geminiApiKeyInput');
-        const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-
-        const { data, error: fnError } = await supabaseClient.functions.invoke('generate-exam', {
-            body: { promptText: parsePrompt, apiKey }
-        });
-
-        if (fnError) throw new Error(fnError.message);
-
-        const aiResponseText = data?.choices?.[0]?.message?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text || "[]";
-        const cleanJsonStr = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const cleanJsonStr = await callGeminiAPI(parsePrompt);
         const examElements = JSON.parse(cleanJsonStr);
 
         let html = `<form id="student-exam-form" class="space-y-4">`;
