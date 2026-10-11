@@ -797,17 +797,30 @@ async function extractTextFromFile(fileInput) {
     return `[Uploaded Document: ${file.name}]`;
 }
 
-// Unified Supabase Edge Function Bridge for Gemini
+// DIRECT FETCH: Bypasses Supabase SDK routing bugs completely
 async function callGeminiAPI(promptText) {
-    const { data, error } = await supabaseClient.functions.invoke('generate-exam', {
-        body: { promptText }
+    const functionUrl = "https://ggiwmwinxrkqceqnqz.supabase.co/functions/v1/generate-exam";
+    const anonKey = supabaseClient.supabaseKey;
+
+    const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${anonKey}`
+        },
+        body: JSON.stringify({ promptText })
     });
 
-    if (error) throw new Error(error.message || JSON.stringify(error));
-    if (data && data.error) throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.error || "Failed to generate exam via Supabase Edge Function.");
+    }
 
     const textResult = data?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.text;
-    if (!textResult) throw new Error("No response content received from AI.");
+    if (!textResult) {
+        throw new Error("No response content received from AI.");
+    }
     
     const cleanText = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
     return cleanText;
@@ -901,7 +914,6 @@ window.viewExamResults = async function(examId) {
     footer.innerHTML = `<button onclick="window.closeExamModal()" class="px-5 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Close</button>`;
     modal.classList.remove('hidden');
 };
-
 // Publish AI Generated Exam to Class
 window.publishExamToClass = async function() {
     const title = document.getElementById('preview-exam-title')?.value;
