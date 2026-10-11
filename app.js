@@ -798,9 +798,9 @@ async function extractTextFromFile(fileInput) {
     return `[Uploaded Document: ${file.name}]`;
 }
 
-// UPDATED: Routes through secure Vercel Serverless Function without key exposures
+// UPDATED: Routes through secure Vercel Serverless Function via absolute URL for cross-domain compatibility
 async function callChatGPTAPI(promptText) {
-    const response = await fetch('/api/generate-exam', {
+    const response = await fetch('https://smartedu-platform-porta-lsystem.vercel.app/api/generate-exam', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
